@@ -15,4 +15,8 @@
                         ReferenceOutputAssembly="false" />
     </ItemGroup>
 
+    <ItemGroup>
+      <AdditionalFiles Include="example.json" />
+    </ItemGroup>
+
 </Project>

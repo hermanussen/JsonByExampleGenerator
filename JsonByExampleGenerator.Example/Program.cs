@@ -14,6 +14,8 @@ namespace JsonByExampleGenerator.Example
                     Name = "Name set in example program",
                     Amount = 10
                 };
+            
+            Console.WriteLine($"I really just invented the type on the spot, and now I can use it, like...\r\nname={f.Name}\r\namount={f.Amount}");
         }
     }
 }
