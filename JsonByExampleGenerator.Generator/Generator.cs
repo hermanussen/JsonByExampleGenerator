@@ -35,18 +35,21 @@ namespace JsonByExampleGenerator.Generator
 
                 Compilation compilation = context.Compilation;
 
-                foreach (InvocationExpressionSyntax invocation in receiver.CandidateInvocations)
+                foreach (ObjectCreationExpressionSyntax objectCreation in receiver.CandidateObjectCreations)
                 {
-                    string typeName = invocation.DescendantNodes().OfType<TypeOfExpressionSyntax>().FirstOrDefault()?.Type?.ToString();
-                    string fileName = (invocation.ArgumentList?.Arguments.Select(a => a.Expression).FirstOrDefault() as LiteralExpressionSyntax)?.Token.ToString().Trim(new [] {'"'});
+                    string typeName = objectCreation.ChildNodes().OfType<IdentifierNameSyntax>().FirstOrDefault()?.Identifier.Text;
+                    string fileName = (objectCreation.ArgumentList?.Arguments.Select(a => a.Expression).FirstOrDefault() as LiteralExpressionSyntax)?.Token.ToString().Trim(new [] {'"'});
 
-                    if(!string.IsNullOrWhiteSpace(typeName) && !string.IsNullOrWhiteSpace(fileName) && context.AdditionalFiles.Any(f => Path.GetFileName(f.Path) == fileName))
+                    if(!string.IsNullOrWhiteSpace(typeName)
+                        && typeName.EndsWith("Json")
+                        && !string.IsNullOrWhiteSpace(fileName)
+                        && context.AdditionalFiles.Any(f => Path.GetFileName(f.Path) == fileName))
                     {
                         var jsonFileText = context.AdditionalFiles.First(f => Path.GetFileName(f.Path) == fileName).GetText(context.CancellationToken);
                         var json = JsonDocument.Parse(jsonFileText.ToString());
 
-                        SemanticModel model = compilation.GetSemanticModel(invocation.SyntaxTree);
-                        var symbol = model.GetDeclaredSymbol(invocation.Ancestors().OfType<TypeDeclarationSyntax>().FirstOrDefault()) as ITypeSymbol;
+                        SemanticModel model = compilation.GetSemanticModel(objectCreation.SyntaxTree);
+                        var symbol = model.GetDeclaredSymbol(objectCreation.Ancestors().OfType<TypeDeclarationSyntax>().FirstOrDefault()) as ITypeSymbol;
 
                         string namespaceName = symbol.ContainingNamespace.ToDisplayString();
                         if(string.IsNullOrWhiteSpace(namespaceName))
@@ -82,6 +85,9 @@ namespace JsonByExampleGenerator.Generator
                             {{
                                 public partial class {typeName}
                                 {{
+                                    public {typeName}() {{}}
+                                    public {typeName}(string jsonFileName) {{}}
+
                                     {sb.ToString()}
                                 }}
                             }}";
@@ -127,28 +133,16 @@ namespace JsonByExampleGenerator.Generator
         /// </summary>
         class SyntaxReceiver : ISyntaxReceiver
         {
-            public List<InvocationExpressionSyntax> CandidateInvocations { get; } = new List<InvocationExpressionSyntax>();
+            public List<ObjectCreationExpressionSyntax> CandidateObjectCreations { get; } = new List<ObjectCreationExpressionSyntax>();
 
             /// <summary>
             /// Called for every syntax node in the compilation, we can inspect the nodes and save any information useful for generation
             /// </summary>
             public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
             {
-                if (syntaxNode is InvocationExpressionSyntax invocationExpressionSyntax)
+                if (syntaxNode is ObjectCreationExpressionSyntax objectCreationExpressionSyntax)
                 {
-                    var methodName = invocationExpressionSyntax
-                        .DescendantNodes()
-                        .OfType<MemberAccessExpressionSyntax>()
-                        .FirstOrDefault()
-                        ?.ChildNodes()
-                        .OfType<IdentifierNameSyntax>()
-                        .LastOrDefault()
-                        ?.Identifier
-                        .Text;
-                    if(methodName == "RegisterByExample")
-                    {
-                        CandidateInvocations.Add(invocationExpressionSyntax);
-                    }
+                    CandidateObjectCreations.Add(objectCreationExpressionSyntax);
                 }
             }
         }
