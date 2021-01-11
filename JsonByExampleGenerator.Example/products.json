@@ -1,0 +1,16 @@
+[
+  {
+    "id": 12,
+    "name": "Example product",
+    "colorVariants": [
+      {
+        "variantId": 12,
+        "color": "Red"
+      },
+      {
+        "variantId": 10,
+        "color": "Green"
+      }
+    ]
+  }
+]

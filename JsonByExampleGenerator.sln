@@ -1,11 +1,19 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26124.0
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 15.0.26124.0
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JsonByExampleGenerator.Generator", "JsonByExampleGenerator.Generator\JsonByExampleGenerator.Generator.csproj", "{1C805869-A87F-4F87-81E6-72B81E752F1C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JsonByExampleGenerator.Generator", "JsonByExampleGenerator.Generator\JsonByExampleGenerator.Generator.csproj", "{1C805869-A87F-4F87-81E6-72B81E752F1C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JsonByExampleGenerator.Example", "JsonByExampleGenerator.Example\JsonByExampleGenerator.Example.csproj", "{FDF39D05-995E-47C3-B100-84EAA1DD53F5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JsonByExampleGenerator.Example", "JsonByExampleGenerator.Example\JsonByExampleGenerator.Example.csproj", "{FDF39D05-995E-47C3-B100-84EAA1DD53F5}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JsonByExampleGenerator.Tests", "JsonByExampleGenerator.Tests\JsonByExampleGenerator.Tests.csproj", "{DC6B5944-E760-41F1-B165-27219596F0B7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{DBD34495-5EC7-4378-9D0A-6BD547564F94}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,9 +23,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{1C805869-A87F-4F87-81E6-72B81E752F1C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -44,5 +49,23 @@ Global
 		{FDF39D05-995E-47C3-B100-84EAA1DD53F5}.Release|x64.Build.0 = Release|Any CPU
 		{FDF39D05-995E-47C3-B100-84EAA1DD53F5}.Release|x86.ActiveCfg = Release|Any CPU
 		{FDF39D05-995E-47C3-B100-84EAA1DD53F5}.Release|x86.Build.0 = Release|Any CPU
+		{DC6B5944-E760-41F1-B165-27219596F0B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC6B5944-E760-41F1-B165-27219596F0B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC6B5944-E760-41F1-B165-27219596F0B7}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DC6B5944-E760-41F1-B165-27219596F0B7}.Debug|x64.Build.0 = Debug|Any CPU
+		{DC6B5944-E760-41F1-B165-27219596F0B7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DC6B5944-E760-41F1-B165-27219596F0B7}.Debug|x86.Build.0 = Debug|Any CPU
+		{DC6B5944-E760-41F1-B165-27219596F0B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC6B5944-E760-41F1-B165-27219596F0B7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DC6B5944-E760-41F1-B165-27219596F0B7}.Release|x64.ActiveCfg = Release|Any CPU
+		{DC6B5944-E760-41F1-B165-27219596F0B7}.Release|x64.Build.0 = Release|Any CPU
+		{DC6B5944-E760-41F1-B165-27219596F0B7}.Release|x86.ActiveCfg = Release|Any CPU
+		{DC6B5944-E760-41F1-B165-27219596F0B7}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E0FEA18C-5B2D-427D-8794-F0F147FE4808}
 	EndGlobalSection
 EndGlobal

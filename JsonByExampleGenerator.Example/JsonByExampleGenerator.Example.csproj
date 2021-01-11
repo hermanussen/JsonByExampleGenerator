@@ -1,22 +1,20 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
-    <LangVersion>preview</LangVersion>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
 
-    <!-- Add this as a new ItemGroup, replacing paths and names appropriately -->
+
+  <!-- Add this as a new ItemGroup, replacing paths and names appropriately -->
     <ItemGroup>
         <!-- Note that this is not a "normal" ProjectReference.
             It needs the additional 'OutputItemType' and 'ReferenceOutputAssmbly' attributes. -->
-        <ProjectReference Include="../JsonByExampleGenerator.Generator/JsonByExampleGenerator.Generator.csproj" 
-                        OutputItemType="Analyzer"
-                        ReferenceOutputAssembly="false" />
+        <ProjectReference Include="../JsonByExampleGenerator.Generator/JsonByExampleGenerator.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup>
-      <AdditionalFiles Include="example.json" />
+      <AdditionalFiles Include="products.json" />
     </ItemGroup>
 
 </Project>

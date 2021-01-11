@@ -1,23 +1,34 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using JsonByExampleGenerator.Example.Json;
 
 namespace JsonByExampleGenerator.Example
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
-            // In the following line, "ExampleJson" could be anything, as long as the name ends with Json.
-            // The source generator will generate a class for it and will use the referenced json file to generate the property names.
-            var f = new ExampleJson("example.json")
+            var product = new Product()
                 {
-                    Name = "Name set in example program",
-                    Amount = 10
+                    Id = 12,
+                    Name = "Example product"
                 };
-            
-            Console.WriteLine($"I really just invented the type on the spot, and now I can use it...");
-            Console.WriteLine($"name={f.Name}");
-            Console.WriteLine($"amount={f.Amount}");
+
+            product.ColorVariants.Add(new ColorVariant()
+                {
+                    VariantId = 12,
+                    Color = "Red"
+                });
+
+            product.ColorVariants.Add(new ColorVariant()
+                {
+                    VariantId = 10,
+                    Color = "Green"
+                });
+
+            Console.WriteLine($"id={product.Id}");
+            Console.WriteLine($"name={product.Name}");
         }
     }
 }
