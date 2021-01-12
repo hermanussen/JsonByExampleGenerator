@@ -39,6 +39,33 @@ namespace Example
         }
 
         [Fact]
+        public void ShouldGenerateWithSpaces()
+        {
+            string source = @"using System;
+
+namespace Example
+{
+    class Test
+    {
+        public static string RunTest()
+        {
+            var json = new TestImplementation.Json.Example()
+                {
+                    PropSpace = ""propval""
+                };
+            return $""{json.PropSpace}"";
+        }
+    }
+}";
+            var compilation = GetGeneratedOutput(source, new Dictionary<string, string>()
+                {
+                    { "example.json", "{ \"prop space\" : \"val\" }" }
+                });
+
+            Assert.Equal("propval", RunTest(compilation));
+        }
+
+        [Fact]
         public void ShouldGenerateNumericProperty()
         {
             string source = @"using System;
@@ -51,18 +78,19 @@ namespace Example
         {
             var json = new TestImplementation.Json.Example()
                 {
-                    PropNum = 8000000000000000000
+                    PropNum = 800000,
+                    PropNumDecimals = 3.14
                 };
-            return $""{json.PropNum}"";
+            return $""{json.PropNum} {json.PropNumDecimals.ToString(new System.Globalization.CultureInfo(""en""))}"";
         }
     }
 }";
             var compilation = GetGeneratedOutput(source, new Dictionary<string, string>()
                 {
-                    { "example.json", "{ \"propNum\" : 2 }" }
+                    { "example.json", "{ \"propNum\" : 2, \"propNumDecimals\" : 3.14 }" }
                 });
 
-            Assert.Equal("8000000000000000000", RunTest(compilation));
+            Assert.Equal("800000 3.14", RunTest(compilation));
         }
 
         [Fact]
@@ -148,6 +176,34 @@ namespace Example
                 });
 
             Assert.Equal("My violin", RunTest(compilation));
+        }
+
+        [Fact]
+        public void ShouldGenerateArrayPropertyStringsAndNumbersAndBools()
+        {
+            string source = @"using System;
+using System.Linq;
+
+namespace Example
+{
+    class Test
+    {
+        public static string RunTest()
+        {
+            var json = new TestImplementation.Json.Example();
+            json.Violins.Add(""My violin"");
+            json.NumberSequence.Add(33);
+            json.BoolSequence.Add(true);
+            return $""{json.Violins.First()} {json.NumberSequence.First()} {json.BoolSequence.First()}"";
+        }
+    }
+}";
+            var compilation = GetGeneratedOutput(source, new Dictionary<string, string>()
+                {
+                    { "example.json", "{ \"violins\" : [ \"One\", \"Two\" ], \"numberSequence\" : [ 22, 44 ], \"boolSequence\" : [ true, false, true ] }" }
+                });
+
+            Assert.Equal("My violin 33 True", RunTest(compilation));
         }
 
         [Fact]

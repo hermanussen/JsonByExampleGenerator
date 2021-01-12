@@ -1,6 +1,6 @@
 # JsonByExampleGenerator
 
-[![Twitter URL](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Ftwitter.com%2Fknifecore%2F)](https://twitter.com/knifecore)
+![publish to nuget](https://github.com/hermanussen/JsonByExampleGenerator/workflows/publish%20to%20nuget/badge.svg) [![Nuget](https://img.shields.io/nuget/v/JsonByExampleGenerator)](https://www.nuget.org/packages/JsonByExampleGenerator/) [![Nuget](https://img.shields.io/nuget/dt/JsonByExampleGenerator?label=nuget%20downloads)](https://www.nuget.org/packages/JsonByExampleGenerator/) [![Twitter URL](https://img.shields.io/twitter/url?style=social&url=https%3A%2F%2Ftwitter.com%2Fknifecore%2F)](https://twitter.com/knifecore)
 
 Generate classes based on example json files in your project. Uses a C# 9 source generator.
 
@@ -28,6 +28,8 @@ using MyCompany.MyProject.Json;
 
 # Example usage
 
+## Use a json file to generate classes
+
 Given the following `products.json` file:
 ```json
 [
@@ -52,14 +54,47 @@ You can then use the generated code as follows:
 
 ```csharp
 var product = new Product()
-                {
-                    Id = 16,
-                    Name = "Violin"
-                };
-
-product.ColorVariants.Add(new ColorVariant()
     {
-        VariantId = 17,
-        Color = "Blue"
-    });
+        Id = 16,
+        Name = "Violin"
+        ColorVariants = new List<ColorVariant>()
+        {
+            new ColorVariant()
+            {
+                VariantId = 17,
+                Color = "Blue"
+            }
+        }
+    };
+```
+
+## Get json configuration without the need for magic strings
+
+If you are using json configuration providers, you can do the following:
+
+1. Ensure that the following NuGet packages are installed: `Microsoft.Extensions.Configuration.Json` and `Microsoft.Extensions.Configuration.Binder`.
+2. Ensure that the `appsettings.json` (or any other configuration files) are included in the compilation as `AdditionalFiles` (as mentioned in the installation instructions). A typical example from your project file would look like this:
+```xml
+<AdditionalFiles Include="appsettings.json">
+  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+</AdditionalFiles>
+``` 
+
+Now, given the following configuration file:
+```json
+{
+  "AppSettings": {
+    "exampleSetting": "example value"
+  }
+}
+```
+
+You would normally do this:
+```csharp
+// outputs "example value"
+config.GetSection("Something").GetSection("SomeValue").Value
+```
+```csharp
+// outputs "example value"
+Appsetting.FromConfig(config).Something.SomeValue
 ```

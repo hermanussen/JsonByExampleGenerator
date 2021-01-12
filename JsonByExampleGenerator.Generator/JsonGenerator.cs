@@ -25,7 +25,7 @@ namespace JsonByExampleGenerator.Generator
         {
             try
             {
-                foreach(var jsonFile in context.AdditionalFiles.Where(f => f.Path.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase)))
+                foreach (var jsonFile in context.AdditionalFiles.Where(f => f.Path.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase)))
                 {
                     var jsonFileText = jsonFile.GetText(context.CancellationToken);
                     if(jsonFileText == null)
@@ -33,29 +33,59 @@ namespace JsonByExampleGenerator.Generator
                         continue;
                     }
 
+                    bool configEnabled = context.Compilation?.ReferencedAssemblyNames
+                        .Any(r => string.Equals("Microsoft.Extensions.Configuration.Json", r.Name, StringComparison.InvariantCulture))
+                        ?? false;
+                    configEnabled = configEnabled
+                        && (context.Compilation?.ReferencedAssemblyNames
+                        .Any(r => string.Equals("Microsoft.Extensions.Configuration.Binder", r.Name, StringComparison.InvariantCulture)) ?? false);
+
                     var json = JsonDocument.Parse(jsonFileText.ToString());
 
                     string namespaceName = context.Compilation?.AssemblyName ?? "JsonByExample";
 
                     var classModels = new List<ClassModel>();
                     var jsonElement = json.RootElement;
-                    string rootTypeName = GetValidName(Path.GetFileNameWithoutExtension(jsonFile.Path).Replace(" ", string.Empty));
+                    string rootTypeName = GetValidName(Path.GetFileNameWithoutExtension(jsonFile.Path).Replace(" ", string.Empty), true);
                     RenderType(context, classModels, jsonElement, namespaceName, rootTypeName);
 
-                    var generatedClasses = classModels.Select(c => $@"
+                    var generatedClasses = classModels.Select(c =>
+                        {
+                            string extensionMethod = string.Empty;
+                            string configReadMethod = string.Empty;
+
+                            if (configEnabled)
+                            {
+
+                                configReadMethod = $@"
+        public static {c.ClassName} FromConfig([System.Diagnostics.CodeAnalysis.NotNull] IConfiguration config)
+        {{
+            return config.Get<{c.ClassName}>();
+        }}";
+                            }
+
+                            string result = $@"
+{extensionMethod}
     public partial class {c.ClassName}
     {{
 {string.Join("\r\n", c.Properties.Select(p => RenderProperty(p)))}
-    }}");
+{configReadMethod}
+    }}";
+
+                            return result;
+    });
+
+                    var optionalDependencies = configEnabled ? "\r\nusing Microsoft.Extensions.Configuration;" : string.Empty;
 
                     string generatedCode = $@"#nullable disable
 using System.Collections.Generic;
+using System.Text.Json.Serialization;{optionalDependencies}
 
 namespace {namespaceName}.Json
 {{{string.Join("\r\n", generatedClasses)}
 }}
 #nullable enable";
-                    context.AddSource($"{namespaceName}.gen.cs",
+                    context.AddSource($"{namespaceName}_{rootTypeName}.gen.cs",
                         SourceText.From(generatedCode, Encoding.UTF8));
                 }
             }
@@ -76,11 +106,10 @@ namespace {namespaceName}.Json
             }
         }
 
-        private static string RenderProperty(PropertyModel p)
+        private static string RenderProperty(PropertyModel propertyModel)
         {
-            string setter = p.Init == null ? " set;" : string.Empty;
-            string init = p.Init != null ? $" = {p.Init};" : string.Empty;
-            return $"        public {p.PropertyType} {p.PropertyName} {{ get;{setter} }}{init}";
+            string init = propertyModel.Init != null ? $" = {propertyModel.Init};" : string.Empty;
+            return $"[JsonPropertyName(\"{propertyModel.PropertyNameOriginal}\")]\r\n        public {propertyModel.PropertyType} {propertyModel.PropertyName} {{ get; set; }}{init}";
         }
 
         private static void RenderType(GeneratorExecutionContext context, List<ClassModel> classModels, JsonElement jsonElement, string namespaceName, string typeName)
@@ -100,44 +129,67 @@ namespace {namespaceName}.Json
 
             foreach (JsonProperty prop in jsonElement.EnumerateObject())
             {
-                string propName = prop.Name;
+                string propName = GetValidName(prop.Name);
                 if (propName.Length > 0)
                 {
-                    if (!char.IsUpper(propName[0]))
-                    {
-                        propName = $"{char.ToUpper(propName[0], CultureInfo.InvariantCulture)}{propName.Substring(1)}";
-                    }
-
                     PropertyModel propertyModel;
 
                     switch (prop.Value.ValueKind)
                     {
                         case JsonValueKind.Array:
                             {
-                                string arrPropName = GetValidName(prop.Name);
-                                RenderType(context, classModels, prop.Value, namespaceName, arrPropName);
+                                string arrPropName = GetValidName(prop.Name, true);
 
-                                propertyModel = new PropertyModel($"IList<{arrPropName}>", propName)
+                                var arrEnumerator = prop.Value.EnumerateArray();
+                                if(arrEnumerator.MoveNext())
+                                {
+                                    if (arrEnumerator.Current.ValueKind == JsonValueKind.Number)
                                     {
-                                        Init = $"new List<{arrPropName}>()"
-                                    };
+                                        arrPropName = "double";
+                                    }
+                                    else if (arrEnumerator.Current.ValueKind == JsonValueKind.String)
+                                    {
+                                        arrPropName = "string";
+                                    }
+                                    else if (arrEnumerator.Current.ValueKind == JsonValueKind.True || arrEnumerator.Current.ValueKind == JsonValueKind.False)
+                                    {
+                                        arrPropName = "bool";
+                                    }
+                                    else
+                                    {
+                                        RenderType(context, classModels, prop.Value, namespaceName, arrPropName);
+                                    }
+
+                                    propertyModel = new PropertyModel(prop.Name, $"IList<{arrPropName}>", propName)
+                                        {
+                                            Init = $"new List<{arrPropName}>()"
+                                        };
+                                }
+                                else
+                                {
+                                    propertyModel = new PropertyModel(prop.Name, $"IList<object>", propName)
+                                        {
+                                            Init = $"new List<object>()"
+                                        };
+                                }
+
                                 break;
                             }
-                        case JsonValueKind.String: propertyModel = new PropertyModel("string", propName); break;
-                        case JsonValueKind.Number: propertyModel = new PropertyModel("long", propName); break;
+                        case JsonValueKind.String: propertyModel = new PropertyModel(prop.Name, "string", propName); break;
+                        case JsonValueKind.Number: propertyModel = new PropertyModel(prop.Name, "double", propName); break;
                         case JsonValueKind.False:
-                        case JsonValueKind.True: propertyModel = new PropertyModel("bool", propName); break;
+                        case JsonValueKind.True: propertyModel = new PropertyModel(prop.Name, "bool", propName); break;
                         case JsonValueKind.Object:
                             {
-                                string objectPropName = GetValidName(prop.Name);
+                                string objectPropName = GetValidName(prop.Name, true);
                                 RenderType(context, classModels, prop.Value, namespaceName, objectPropName);
 
-                                propertyModel = new PropertyModel(objectPropName, propName);
+                                propertyModel = new PropertyModel(prop.Name, objectPropName, propName);
                                 break;
                             }
                         case JsonValueKind.Undefined:
                         case JsonValueKind.Null:
-                        default: propertyModel = new PropertyModel("object", propName); break;
+                        default: propertyModel = new PropertyModel(prop.Name, "object", propName); break;
                     }
 
                     classModel.Properties.Add(propertyModel);
@@ -155,19 +207,37 @@ namespace {namespaceName}.Json
             }
         }
 
-        private static string GetValidName(string typeName)
+        private static string GetValidName(string typeName, bool singularize = false)
         {
-            if (_pluralizer.IsPlural(typeName))
+            if (singularize && _pluralizer.IsPlural(typeName))
             {
                 typeName = _pluralizer.Singularize(typeName);
             }
 
-            if (!char.IsUpper(typeName[0]))
+            List<char> newTypeName = new List<char>();
+            bool nextCharUpper = true;
+            for(int i = 0; i < typeName.Length; i++)
             {
-                typeName = $"{char.ToUpper(typeName[0], CultureInfo.InvariantCulture)}{typeName.Substring(1)}";
+                if (typeName[i] == ' ')
+                {
+                    nextCharUpper = true;
+                    continue;
+                }
+                
+                if (nextCharUpper)
+                {
+                    nextCharUpper = false;
+                    if (!char.IsUpper(typeName[i]))
+                    {
+                        newTypeName.Add(char.ToUpper(typeName[i], CultureInfo.InvariantCulture));
+                        continue;
+                    }
+                }
+
+                newTypeName.Add(typeName[i]);
             }
 
-            return typeName;
+            return new string(newTypeName.ToArray());
         }
 
         public void Initialize(GeneratorInitializationContext context)
