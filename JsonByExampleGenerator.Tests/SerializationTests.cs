@@ -63,7 +63,7 @@ namespace Example
                     }
                 });
 
-            Assert.Equal(jsonProduct.Replace(" ", string.Empty).Replace("\r\n", string.Empty), RunTest(compilation));
+            Assert.Equal(jsonProduct.Replace(" ", string.Empty).Replace("\r", string.Empty).Replace("\n", string.Empty), RunTest(compilation));
         }
     }
 }
