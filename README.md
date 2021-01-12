@@ -30,6 +30,8 @@ using MyCompany.MyProject.Json;
 
 ## Use a json file to generate classes
 
+[![Json configuration feature example](Media/jsonbyexample_simple.gif)]
+
 Given the following `products.json` file:
 ```json
 [
@@ -69,6 +71,8 @@ var product = new Product()
 ```
 
 ## Get json configuration without the need for magic strings
+
+[![Json configuration feature example](Media/jsonbyexample_config.gif)]
 
 If you are using json configuration providers, you can do the following:
 
