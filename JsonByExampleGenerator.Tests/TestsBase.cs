@@ -14,8 +14,14 @@ using Xunit.Abstractions;
 
 namespace JsonByExampleGenerator.Tests
 {
-    public class TestsBase
+    /// <summary>
+    /// A base class that has some helper methods for running the generator and compiling code.
+    /// </summary>
+    public abstract class TestsBase
     {
+        /// <summary>
+        /// Helps with AdditionalFiles by exposing them as text files.
+        /// </summary>
         private class AdditionalTextJson : AdditionalText
         {
             private readonly string _path;
@@ -45,11 +51,14 @@ namespace JsonByExampleGenerator.Tests
         private static List<MetadataReference>? _metadataReferences;
         private static readonly object Lock = new object();
 
-        public TestsBase(ITestOutputHelper output)
+        protected TestsBase(ITestOutputHelper output)
         {
             _output = output;
         }
 
+        /// <summary>
+        /// Retrieves and caches referenced assemblies, so that tested compilations can make use of them.
+        /// </summary>
         private static List<MetadataReference> MetadataReferences
         {
             get
@@ -74,6 +83,12 @@ namespace JsonByExampleGenerator.Tests
             }
         }
 
+        /// <summary>
+        /// Takes compiled input and runs the code.
+        /// </summary>
+        /// <param name="compilation">Compiled code</param>
+        /// <param name="diagnostics">If specified, this list will be populated with diagnostics that can be used for debugging</param>
+        /// <returns></returns>
         protected string? RunTest(Compilation compilation, List<Diagnostic>? diagnostics = null)
         {
             if (compilation == null)
@@ -81,6 +96,7 @@ namespace JsonByExampleGenerator.Tests
                 throw new ArgumentException($"Argument {nameof(compilation)} must not be null");
             }
 
+            // Get the compilation and load the assembly
             using var memoryStream = new MemoryStream();
             EmitResult result = compilation.Emit(memoryStream);
 
@@ -88,6 +104,8 @@ namespace JsonByExampleGenerator.Tests
             {
                 memoryStream.Seek(0, SeekOrigin.Begin);
                 Assembly assembly = Assembly.Load(memoryStream.ToArray());
+
+                // We assume the generated code has a type Example.Test that contains a method RunTest(Async), to run the test
                 Type? testClassType = assembly.GetType("Example.Test");
                 var method = testClassType?.GetMethod("RunTest") ?? testClassType?.GetMethod("RunTestAsync");
                 if(method == null)
@@ -95,17 +113,20 @@ namespace JsonByExampleGenerator.Tests
                     return "-- could not find test method --";
                 }
 
+                // Actually invoke the method and return the result
                 var resultObj = method.Invoke(null, Array.Empty<object>());
                 if (resultObj is not string stringResult)
                 {
                     return "-- result was not a string --";
                 }
 
+                // Log the test output, for debugging purposes
                 _output.WriteLine($"Generated test output:\r\n===\r\n{stringResult}\r\n===\r\n");
 
                 return stringResult;
             }
 
+            // If diagnostics list is specified, fill it with any diagnostics. If not, fail the unit test directly.
             if (diagnostics == null)
             {
                 Assert.False(true,
@@ -119,6 +140,13 @@ namespace JsonByExampleGenerator.Tests
             return null;
         }
 
+        /// <summary>
+        /// Build a compilation and run the source generator.
+        /// </summary>
+        /// <param name="source">Input source</param>
+        /// <param name="additionalFilesAndContents">Additional files that must be added to the compilation</param>
+        /// <param name="diagnostics">Optional; if specified, this will be filled with info for debugging</param>
+        /// <returns></returns>
         protected Compilation GetGeneratedOutput(string source, IDictionary<string, string> additionalFilesAndContents, List<Diagnostic>? diagnostics = null)
         {
             var syntaxTree = CSharpSyntaxTree.ParseText(source);

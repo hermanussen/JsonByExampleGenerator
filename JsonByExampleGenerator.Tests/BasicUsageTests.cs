@@ -5,6 +5,9 @@ using Xunit.Abstractions;
 
 namespace JsonByExampleGenerator.Tests
 {
+    /// <summary>
+    /// Unit tests basic usage scenarios.
+    /// </summary>
     public class BasicUsageTests : TestsBase
     {
         public BasicUsageTests(ITestOutputHelper output) : base(output)

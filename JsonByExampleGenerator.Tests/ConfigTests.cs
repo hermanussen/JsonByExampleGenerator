@@ -8,6 +8,9 @@ using Xunit.Abstractions;
 
 namespace JsonByExampleGenerator.Tests
 {
+    /// <summary>
+    /// Unit tests for using the generator to read configuration in a typed way.
+    /// </summary>
     public class ConfigTests : TestsBase
     {
         public ConfigTests(ITestOutputHelper output) : base(output)

@@ -8,6 +8,9 @@ using Xunit.Abstractions;
 
 namespace JsonByExampleGenerator.Tests
 {
+    /// <summary>
+    /// Unit tests that check if the generated code correctly serializes and deserializes to and from json.
+    /// </summary>
     public class SerializationTests : TestsBase
     {
         public SerializationTests(ITestOutputHelper output) : base(output)

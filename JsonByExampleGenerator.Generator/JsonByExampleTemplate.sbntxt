@@ -1,0 +1,21 @@
+﻿#nullable disable
+using System.Collections.Generic;
+using System.Text.Json.Serialization;{{ for OptionalDependency in OptionalDependencies}}
+using {{ OptionalDependency }};
+{{ end }}
+namespace {{ NamespaceName }}.Json
+{
+{{ for ClassModel in ClassModels }}
+    public partial class {{ ClassModel.ClassName }}
+    {
+        {{ for Property in ClassModel.Properties }}[JsonPropertyName("{{ Property.PropertyNameOriginal }}")]
+        public {{ Property.PropertyType }} {{ Property.PropertyName }} { get; set; }{{ if Property.Init }} = {{ Property.Init }};{{ end }}
+        {{ end }}{{ if ConfigEnabled }}
+        public static {{ ClassModel.ClassName }} FromConfig([System.Diagnostics.CodeAnalysis.NotNull] IConfiguration config)
+        {
+            return config.Get<{{ ClassModel.ClassName }}>();
+        }{{ end }}
+    }
+{{ end }}
+}
+#nullable enable

@@ -5,6 +5,10 @@ using Microsoft.Extensions.Configuration;
 
 namespace JsonByExampleGenerator.Example
 {
+    /// <summary>
+    /// This program just shows an example of how you can use the JsonByExampleGenerator.
+    /// It's not required for testing, as there are unit tests in JsonByExampleGenerator.Tests.
+    /// </summary>
     class Program
     {
         static void Main()

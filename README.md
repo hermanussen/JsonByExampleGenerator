@@ -102,3 +102,11 @@ config.GetSection("Something").GetSection("SomeValue").Value
 // outputs "example value"
 Appsetting.FromConfig(config).Something.SomeValue
 ```
+
+## Use your own Scriban template instead of the default one
+
+If you have specific needs for the generated code, you can easily create a [Scriban](https://github.com/scriban/scriban) template to replace the default one. All you have to do is:
+- Create a file with the same name as your example json file, but with the extension `.sbntxt` instead of `.json`.
+- Ensure that the file is included in the `AdditionalFiles` for your project (the same way that you include your json files).
+- Copy the contents of the [default template](JsonByExampleGenerator.Generator/JsonByExampleTemplate.sbntxt), paste them in the file and save.
+- Change the template in any way you want, and you should observe the changes when you build your project.
