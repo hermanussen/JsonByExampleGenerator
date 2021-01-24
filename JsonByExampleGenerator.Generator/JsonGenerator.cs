@@ -15,6 +15,7 @@ using JsonByExampleGenerator.Generator.Models;
 using System.Globalization;
 using Scriban;
 using JsonByExampleGenerator.Generator.Utils;
+using System.Text.Json.Serialization;
 
 namespace JsonByExampleGenerator.Generator
 {
@@ -87,6 +88,11 @@ namespace JsonByExampleGenerator.Generator
                         template = Template.Parse(EmbeddedResource.GetContent(defaultTemplatePath), defaultTemplatePath);
                     }
 
+                    if (context.Compilation != null)
+                    {
+                        FilterAndChangeBasedOnExistingCode(classModels, namespaceName, context.Compilation);
+                    }
+
                     // Use Scriban to render the code using the model that was built
                     string generatedCode = template.Render(new
                     {
@@ -114,6 +120,40 @@ namespace JsonByExampleGenerator.Generator
                         DiagnosticSeverity.Error,
                         isEnabledByDefault: true), 
                     Location.None));
+            }
+        }
+
+        /// <summary>
+        /// If json properties are specified manually, filter them here, so they can be omitted when generating code.
+        /// </summary>
+        /// <param name="classModels">The list of class models to apply filtering to</param>
+        /// <param name="namespaceName">The namespace, so we know what existing types to resolve</param>
+        /// <param name="compilation">The compilation, so we can find existing types</param>
+        private void FilterAndChangeBasedOnExistingCode(List<ClassModel> classModels, string namespaceName, Compilation compilation)
+        {
+            foreach(var classModel in classModels)
+            {
+                // Find a class in the current compilation that already exists
+                var existingClass = compilation.GetTypeByMetadataName($"{namespaceName}.Json.{classModel.ClassName}");
+                if(existingClass != null)
+                {
+                    // Find all JsonPropertyName decorations
+                    var jsonProperties = existingClass
+                        .GetMembers()
+                        .OfType<IPropertySymbol>()
+                        .SelectMany(m => m
+                            .GetAttributes()
+                            .Where(a =>
+                                string.Equals(nameof(JsonPropertyNameAttribute), a.AttributeClass?.Name, StringComparison.InvariantCulture)
+                                || string.Equals("JsonPropertyName", a.AttributeClass?.Name, StringComparison.InvariantCulture))
+                            .Select(a => a.ConstructorArguments.FirstOrDefault().Value?.ToString())
+                            .Where(a => a != null));
+                    if(jsonProperties != null)
+                    {
+                        // Remove properties that are already in the compilation; no need to generate them
+                        classModel.Properties.RemoveAll(p => jsonProperties.Contains(p.PropertyNameOriginal));
+                    }
+                }
             }
         }
 

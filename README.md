@@ -110,3 +110,33 @@ If you have specific needs for the generated code, you can easily create a [Scri
 - Ensure that the file is included in the `AdditionalFiles` for your project (the same way that you include your json files).
 - Copy the contents of the [default template](JsonByExampleGenerator.Generator/JsonByExampleTemplate.sbntxt), paste them in the file and save.
 - Change the template in any way you want, and you should observe the changes when you build your project.
+
+## Manually change the type or name of properties
+
+Sometimes you may not like the name of the property or the type that is used. For example, if you want a `DateTime` instead of a `string` or a `int` instead of a `double`. The generator cannot detect this based on examples.
+
+You can fix this by specifying the property exactly how you want it in a partial class. Example:
+
+Given the following `products.json` file:
+```json
+[
+  {
+    "id": 12,
+    "name": "Example product"
+  }
+]
+```
+
+You can specify this partial class:
+
+```csharp
+namespace MyNs.Json
+{
+  public partial class Product
+  {
+    // Based on the attribute, the generator knows not to generate this property
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+  }
+}
+```
