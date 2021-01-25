@@ -8,8 +8,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
-using Microsoft.CodeAnalysis.Emit;
-using System.Reflection;
 using Pluralize.NET;
 using JsonByExampleGenerator.Generator.Models;
 using System.Globalization;
@@ -35,6 +33,31 @@ namespace JsonByExampleGenerator.Generator
         {
             try
             {
+                // The namespace of the code is determined by the assembly name of the compilation
+                string namespaceName = context.Compilation?.AssemblyName ?? "JsonByExample";
+
+                // Determine if the functionality for easy access to configuration should be enabled
+                bool configEnabled = IsConfigurationEnabled(context);
+
+                // A list of dependencies to be added to the using statements in the code generation
+                var optionalDependencies = new List<string>();
+                if (configEnabled)
+                {
+                    optionalDependencies.Add("Microsoft.Extensions.Configuration");
+                }
+
+                // Generate code that should only be generated once
+                const string onlyOnceTemplatePath = "OnlyOnceTemplate.sbntxt";
+                var onlyOnceTemplate = Template.Parse(EmbeddedResource.GetContent(onlyOnceTemplatePath), onlyOnceTemplatePath);
+                string onlyOnceGeneratedCode = onlyOnceTemplate.Render(new
+                {
+                    NamespaceName = namespaceName
+                }, member => member.Name);
+
+                // Add the generated code to the compilation
+                context.AddSource($"{namespaceName}_onlyonce.gen.cs",
+                    SourceText.From(onlyOnceGeneratedCode, Encoding.UTF8));
+
                 // Resolve all json files that are added to the AdditionalFiles in the compilation
                 foreach (var jsonFile in context.AdditionalFiles.Where(f => f.Path.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase)))
                 {
@@ -44,13 +67,7 @@ namespace JsonByExampleGenerator.Generator
                         continue;
                     }
 
-                    // Determine if the functionality for easy access to configuration should be enabled
-                    bool configEnabled = IsConfigurationEnabled(context);
-
                     var json = JsonDocument.Parse(jsonFileText.ToString());
-
-                    // The namespace of the code is determined by the assembly name of the compilation
-                    string namespaceName = context.Compilation?.AssemblyName ?? "JsonByExample";
 
                     // Read the json and build a list of models that can be used to generate classes
                     var classModels = new List<ClassModel>();
@@ -58,12 +75,6 @@ namespace JsonByExampleGenerator.Generator
                     string rootTypeName = GetValidName(Path.GetFileNameWithoutExtension(jsonFile.Path).Replace(" ", string.Empty), true);
                     ResolveTypeRecursive(context, classModels, jsonElement, rootTypeName);
 
-                    // A list of dependencies to be added to the using statements in the code generation
-                    var optionalDependencies = new List<string>();
-                    if (configEnabled)
-                    {
-                        optionalDependencies.Add("Microsoft.Extensions.Configuration");
-                    }
 
                     // Attempt to find a Scriban template in the AdditionalFiles that has the same name as the json
                     string templateFileName = $"{Path.GetFileNameWithoutExtension(jsonFile.Path)}.sbntxt";
@@ -131,7 +142,56 @@ namespace JsonByExampleGenerator.Generator
         /// <param name="compilation">The compilation, so we can find existing types</param>
         private void FilterAndChangeBasedOnExistingCode(List<ClassModel> classModels, string namespaceName, Compilation compilation)
         {
-            foreach(var classModel in classModels)
+            // Deal with classes that have been decorated with JsonRenamedFrom attribute
+            // They must be renamed in the model
+            var renamedAttributes = compilation
+                .SyntaxTrees
+                .SelectMany(s => s
+                    .GetRoot()
+                    .DescendantNodes()
+                    .Where(d => d.IsKind(SyntaxKind.Attribute))
+                    .OfType<AttributeSyntax>()
+                    .Where(d => d.Name.ToString() == "JsonRenamedFrom")
+                    .Select(d => new
+                        {
+                            Renamed = (d?.Parent?.Parent as ClassDeclarationSyntax)?.Identifier.ToString().Trim(),
+                            From = d?.ArgumentList?.Arguments.FirstOrDefault()?.ToString().Trim().Trim('\"')
+                        }))
+                .Where(x => x.From != null
+                            && x.Renamed != null
+                            && compilation.GetTypeByMetadataName($"{namespaceName}.Json.{x.Renamed}") != null)
+                .ToList();
+            foreach (var classModel in classModels)
+            {
+                var match = renamedAttributes.FirstOrDefault(r => r.From == classModel.ClassName);
+                if (match != null)
+                {
+                    // Rename class
+                    classModel.ClassName = match.Renamed ?? classModel.ClassName;
+
+                    // Find all properties and update the type and init
+                    foreach(var property in classModels.SelectMany(p => p.Properties).ToList())
+                    {
+                        // Update init statement, if applicable
+                        if(property.Init == $"new List<{match.From}>()")
+                        {
+                            property.Init = $"new List<{classModel.ClassName}>()";
+                        }
+
+                        // Rename property type, if applicable
+                        if(property.PropertyType == match.From)
+                        {
+                            property.PropertyType = classModel.ClassName;
+                        }
+                        else if (property.PropertyType == $"IList<{match.From}>")
+                        {
+                            property.PropertyType = $"IList<{classModel.ClassName}>";
+                        }
+                    }
+                }
+            }
+
+            foreach (var classModel in classModels)
             {
                 // Find a class in the current compilation that already exists
                 var existingClass = compilation.GetTypeByMetadataName($"{namespaceName}.Json.{classModel.ClassName}");
@@ -217,11 +277,11 @@ namespace JsonByExampleGenerator.Generator
                                 {
                                     if (arrEnumerator.Current.ValueKind == JsonValueKind.Number)
                                     {
-                                        arrPropName = "double";
+                                        arrPropName = FindBestNumericType(arrEnumerator.Current);
                                     }
                                     else if (arrEnumerator.Current.ValueKind == JsonValueKind.String)
                                     {
-                                        arrPropName = "string";
+                                        arrPropName = FindBestStringType(arrEnumerator.Current);
                                     }
                                     else if (arrEnumerator.Current.ValueKind == JsonValueKind.True || arrEnumerator.Current.ValueKind == JsonValueKind.False)
                                     {
@@ -247,8 +307,8 @@ namespace JsonByExampleGenerator.Generator
 
                                 break;
                             }
-                        case JsonValueKind.String: propertyModel = new PropertyModel(prop.Name, "string", propName); break;
-                        case JsonValueKind.Number: propertyModel = new PropertyModel(prop.Name, "double", propName); break;
+                        case JsonValueKind.String: propertyModel = new PropertyModel(prop.Name, FindBestStringType(prop.Value), propName); break;
+                        case JsonValueKind.Number: propertyModel = new PropertyModel(prop.Name, FindBestNumericType(prop.Value), propName); break;
                         case JsonValueKind.False:
                         case JsonValueKind.True: propertyModel = new PropertyModel(prop.Name, "bool", propName); break;
                         case JsonValueKind.Object:
@@ -281,6 +341,53 @@ namespace JsonByExampleGenerator.Generator
                 // No need to merge, just add the new class model
                 classModels.Add(classModel);
             }
+        }
+
+        /// <summary>
+        /// Based on the value specified, determine an appropriate numeric type.
+        /// </summary>
+        /// <param name="propertyValue">Example value of the property</param>
+        /// <returns>The name of the numeric type</returns>
+        private static string FindBestNumericType(JsonElement propertyValue)
+        {
+            if (propertyValue.TryGetInt32(out _))
+            {
+                return "int";
+            }
+
+            if (propertyValue.TryGetInt64(out _))
+            {
+                return "long";
+            }
+
+            if (propertyValue.TryGetDouble(out var doubleVal)
+                && propertyValue.TryGetDecimal(out var decimalVal)
+                && Convert.ToDecimal(doubleVal) == decimalVal)
+            {
+                return "double";
+            }
+
+            if (propertyValue.TryGetDecimal(out _))
+            {
+                return "decimal";
+            }
+
+            return "object";
+        }
+
+        /// <summary>
+        /// Based on the value specified, determine if anything better than "string" can be used.
+        /// </summary>
+        /// <param name="current">Example value of the property</param>
+        /// <returns>string or something better</returns>
+        private static string FindBestStringType(JsonElement propertyValue)
+        {
+            if (propertyValue.TryGetDateTime(out _))
+            {
+                return "DateTime";
+            }
+
+            return "string";
         }
 
         /// <summary>

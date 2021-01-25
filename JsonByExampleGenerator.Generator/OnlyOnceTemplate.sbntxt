@@ -1,0 +1,15 @@
+﻿using System;
+
+namespace {{ NamespaceName }}.Json
+{
+    [AttributeUsage(AttributeTargets.Class)]
+    internal sealed class JsonRenamedFromAttribute : Attribute
+    {
+        internal string SourceName { get; private set; }
+
+        internal JsonRenamedFromAttribute(string sourceName)
+        {
+            SourceName = sourceName;
+        }
+    }
+}

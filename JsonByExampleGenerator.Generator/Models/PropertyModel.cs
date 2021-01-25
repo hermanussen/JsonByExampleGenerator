@@ -8,7 +8,7 @@
         /// <summary>
         /// The C# type of the property.
         /// </summary>
-        public string PropertyType { get; private set; }
+        public string PropertyType { get; internal set; }
 
         /// <summary>
         /// The C# safe to use name of the property.
@@ -19,12 +19,12 @@
         /// The original property name, before making it safe to use in C#.
         /// Can be used for example, for mapping back to json or comments.
         /// </summary>
-        public object PropertyNameOriginal { get; private set; }
+        public string PropertyNameOriginal { get; private set; }
 
         /// <summary>
         /// If the property needs to have a default value, it can be specified here.
         /// </summary>
-        public string? Init { get; set; }
+        public string? Init { get; internal set; }
 
         /// <summary>
         /// Create a new instance of the class.

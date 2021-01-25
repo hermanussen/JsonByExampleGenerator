@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
-using System.Text;
 
 namespace JsonByExampleGenerator.Generator.Models
 {
@@ -10,6 +9,14 @@ namespace JsonByExampleGenerator.Generator.Models
     /// </summary>
     public class ClassModel
     {
+        private static readonly string[] numericPropertyTypeOrder = new[]
+        {
+            "int",
+            "long",
+            "double",
+            "decimal"
+        };
+
         /// <summary>
         /// The name of the class, that should be valid in C#.
         /// </summary>
@@ -37,7 +44,28 @@ namespace JsonByExampleGenerator.Generator.Models
         {
             if (classModel != null)
             {
-                Properties.AddRange(classModel.Properties.Except(this.Properties, new PropertyModelEqualityComparer()));
+                foreach(var property in classModel.Properties)
+                {
+                    var existingProp = Properties.FirstOrDefault(p => p.PropertyName == property.PropertyName);
+                    if(existingProp == null)
+                    {
+                        Properties.Add(property);
+                    }
+                    else if(existingProp.PropertyType != property.PropertyType)
+                    {
+                        // If there is a less restrictive property type that is needed, it must be changed
+                        if (numericPropertyTypeOrder.Contains(existingProp.PropertyType)
+                            && numericPropertyTypeOrder.Contains(property.PropertyType)
+                            && Array.IndexOf(numericPropertyTypeOrder, existingProp.PropertyType) < Array.IndexOf(numericPropertyTypeOrder, property.PropertyType))
+                        {
+                            existingProp.PropertyType = property.PropertyType;
+                        }
+                        else if (existingProp.PropertyType == "DateTime" && property.PropertyType == "string")
+                        {
+                            existingProp.PropertyType = property.PropertyType;
+                        }
+                    }
+                }
             }
         }
     }

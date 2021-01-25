@@ -140,3 +140,42 @@ namespace MyNs.Json
   }
 }
 ```
+
+## Manually change the name of generated types
+
+The generator automatically attempts to determine names for generated types. For example, if a json property is named "products", the model that will be used is `Product`. If you don't like that, you can easily change it by using the `JsonRenamedFrom` attribute.
+
+Given the following `products.json` file:
+```json
+[
+  {
+    "id": 12,
+    "name": "Example product"
+  }
+]
+```
+
+By default, it will render something like this:
+```csharp
+namespace MyNs.Json
+{
+  public partial class Product
+  {
+    // ...
+  }
+}
+```
+
+You can specify this partial class:
+
+```csharp
+namespace MyNs.Json
+{
+  [JsonRenamedFrom("Product")]
+  public partial class Asset
+  {
+  }
+}
+```
+
+The generator will respect the new name and change it in all generated code.
