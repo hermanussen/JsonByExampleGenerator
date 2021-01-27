@@ -100,6 +100,7 @@ You would normally do this:
 // outputs "example value"
 config.GetSection("Something").GetSection("SomeValue").Value
 ```
+But now, you can do this:
 ```csharp
 // outputs "example value"
 Appsetting.FromConfig(config).Something.SomeValue
