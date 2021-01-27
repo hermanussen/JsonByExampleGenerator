@@ -22,7 +22,7 @@ namespace JsonByExampleGenerator.Tests
         {
             string source = @"using System;
 using Microsoft.Extensions.Configuration;
-using TestImplementation.Json;
+using TestImplementation.Json.Appsettings;
 
 namespace Example
 {

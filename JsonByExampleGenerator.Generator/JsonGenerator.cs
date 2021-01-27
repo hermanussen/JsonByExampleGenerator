@@ -65,7 +65,8 @@ namespace JsonByExampleGenerator.Generator
                     SourceText.From(onlyOnceGeneratedCode, Encoding.UTF8));
 
                 // Resolve all json files that are added to the AdditionalFiles in the compilation
-                foreach (var jsonFile in context.AdditionalFiles.Where(f => f.Path.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase)))
+                var allJsonFiles = context.AdditionalFiles.Where(f => f.Path.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase));
+                foreach (var jsonFile in allJsonFiles)
                 {
                     var jsonFileText = jsonFile.GetText(context.CancellationToken);
                     if (jsonFileText == null)
@@ -74,6 +75,9 @@ namespace JsonByExampleGenerator.Generator
                     }
 
                     var json = JsonDocument.Parse(jsonFileText.ToString());
+
+                    // Determine the deeper namespace based on the path within the project and the file name
+                    string deeperNamespaceName = GetDeeperNamespaceName(namespaceName, jsonFile);
 
                     // Read the json and build a list of models that can be used to generate classes
                     var classModels = new List<ClassModel>();
@@ -119,20 +123,20 @@ namespace JsonByExampleGenerator.Generator
 
                     if (context.Compilation != null)
                     {
-                        FilterAndChangeBasedOnExistingCode(classModels, namespaceName, context.Compilation);
+                        FilterAndChangeBasedOnExistingCode(classModels, deeperNamespaceName, context.Compilation);
                     }
 
                     // Use Scriban to render the code using the model that was built
                     string generatedCode = template.Render(new
                     {
                         OptionalDependencies = optionalDependencies,
-                        NamespaceName = namespaceName,
+                        NamespaceName = deeperNamespaceName,
                         ConfigEnabled = configEnabled,
                         ClassModels = classModels
                     }, member => member.Name);
 
                     // Add the generated code to the compilation
-                    context.AddSource($"{namespaceName}_{rootTypeName}.gen.cs",
+                    context.AddSource(GetSourceFileName(namespaceName, jsonFile.Path),
                         SourceText.From(generatedCode, Encoding.UTF8));
                 }
             }
@@ -150,6 +154,50 @@ namespace JsonByExampleGenerator.Generator
                         isEnabledByDefault: true), 
                     Location.None));
             }
+        }
+
+        /// <summary>
+        /// Based on a namespace and a file, determine a proper namespace to generate classes in.
+        /// </summary>
+        /// <param name="namespaceName">Root namespace name</param>
+        /// <param name="jsonFile">File to get namespace for</param>
+        /// <returns></returns>
+        private static string GetDeeperNamespaceName(string namespaceName, AdditionalText jsonFile)
+        {
+            string compilationPath = Path.GetFullPath(".");
+            string relativePath = Path.GetFullPath(jsonFile.Path);
+            if (relativePath.StartsWith(compilationPath))
+            {
+                relativePath = relativePath.Substring(compilationPath.Length);
+            }
+
+            if (relativePath.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase))
+            {
+                relativePath = relativePath.Substring(0, relativePath.Length - 5);
+            }
+
+            var deeperNamespaceParts = relativePath
+                .Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(r => GetValidName(r));
+
+            return $"{namespaceName}.Json.{string.Join(".", deeperNamespaceParts)}";
+        }
+
+        /// <summary>
+        /// Ensure a unique name for the added source file for the compilation.
+        /// </summary>
+        /// <param name="namespaceName">The namespace in code</param>
+        /// <param name="path">The path of the json file</param>
+        /// <returns></returns>
+        private string GetSourceFileName(string namespaceName, string path)
+        {
+            var fullPath = Path.GetFullPath(path)
+                .Replace(Path.GetFullPath("."), string.Empty)
+                .Replace("/", "_")
+                .Replace("\\", "_")
+                .Replace(".", "_");
+
+            return $"{namespaceName}_{fullPath.Trim('_')}.gen.cs";
         }
 
         /// <summary>
@@ -207,7 +255,7 @@ namespace JsonByExampleGenerator.Generator
                         }))
                 .Where(x => x.From != null
                             && x.Renamed != null
-                            && compilation.GetTypeByMetadataName($"{namespaceName}.Json.{x.Renamed}") != null)
+                            && compilation.GetTypeByMetadataName($"{namespaceName}.{x.Renamed}") != null)
                 .ToList();
             foreach (var classModel in classModels)
             {
@@ -242,7 +290,7 @@ namespace JsonByExampleGenerator.Generator
             foreach (var classModel in classModels)
             {
                 // Find a class in the current compilation that already exists
-                var existingClass = compilation.GetTypeByMetadataName($"{namespaceName}.Json.{classModel.ClassName}");
+                var existingClass = compilation.GetTypeByMetadataName($"{namespaceName}.{classModel.ClassName}");
                 if(existingClass != null)
                 {
                     // Find all DataMember decorations
@@ -385,7 +433,8 @@ namespace JsonByExampleGenerator.Generator
             }
 
             // If there is already a model defined that matches by name, then we add any new properties by merging the models
-            var matchingClassModel = classModels.FirstOrDefault(c => string.Equals(c.ClassName, classModel.ClassName, StringComparison.InvariantCulture));
+            var matchingClassModel = classModels.FirstOrDefault(
+                c => string.Equals(c.ClassName, classModel.ClassName, StringComparison.InvariantCulture));
             if (matchingClassModel != null)
             {
                 matchingClassModel.Merge(classModel);

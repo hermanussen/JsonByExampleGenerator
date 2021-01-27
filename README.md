@@ -21,10 +21,12 @@ dotnet add package JsonByExampleGenerator
   <AdditionalFiles Include="products.json" />
 </ItemGroup>
 ```
-3. You can now use the generated classes in your code. Add a using statement for `[your_dll_name_without_extension].Json`. E.g.:
+3. You can now use the generated classes in your code. Add a using statement for `[your_dll_name_without_extension].Json.[path_to_json_csharp_friendly]`. E.g.:
 ```csharp
-using MyCompany.MyProject.Json;
+// For /mock_files/products.json
+using MyCompany.MyProject.Json.MockFiles.Products;
 ```
+Intellisense should help you out when adding a using statement for this. The complicated namespace is needed to ensure separation between different files.
 
 # Example usage
 
@@ -135,7 +137,7 @@ Given the following `products.json` file:
 You can specify this partial class:
 
 ```csharp
-namespace MyNs.Json
+namespace MyNs.Json.Products
 {
   public partial class Product
   {
@@ -162,7 +164,7 @@ Given the following `products.json` file:
 
 By default, it will render something like this:
 ```csharp
-namespace MyNs.Json
+namespace MyNs.Json.Products
 {
   [DataContract]
   public partial class Product
@@ -175,7 +177,7 @@ namespace MyNs.Json
 You can specify this partial class:
 
 ```csharp
-namespace MyNs.Json
+namespace MyNs.Json.Products
 {
   [JsonRenamedFrom("Product")]
   public partial class Asset

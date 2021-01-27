@@ -177,10 +177,11 @@ namespace JsonByExampleGenerator.Tests
                 diagnostics.AddRange(generateDiagnostics);
             }
 
-            string output = outputCompilation.SyntaxTrees.Last().ToString();
-            Assert.NotNull(output);
-
-            _output.WriteLine($"Generated code:\r\n===\r\n{output}\r\n===\r\n");
+            var output = outputCompilation
+                .SyntaxTrees
+                .Skip(outputCompilation.SyntaxTrees.Count() - additionalFilesAndContents.Where(a => a.Key.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase)).Count());
+            
+            _output.WriteLine($"Generated code:\r\n===\r\n{string.Join("\r\n===\r\n", output)}\r\n===\r\n");
 
             return outputCompilation;
         }

@@ -9,6 +9,9 @@ using Xunit.Abstractions;
 
 namespace JsonByExampleGenerator.Tests
 {
+    /// <summary>
+    /// Tests for dealing with figuring out what data type properties should be.
+    /// </summary>
     public class PropertyTypeGuessingTests : TestsBase
     {
         public PropertyTypeGuessingTests(ITestOutputHelper output) : base(output)
@@ -120,7 +123,7 @@ namespace Example
     {
         public static string RunTest()
         {
-            var propertyType = typeof(TestImplementation.Json.Example).GetProperties().First().PropertyType.Name;
+            var propertyType = typeof(TestImplementation.Json.Examples.Example).GetProperties().First().PropertyType.Name;
             return $""{propertyType}"";
         }
     }

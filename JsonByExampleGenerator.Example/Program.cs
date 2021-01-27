@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using JsonByExampleGenerator.Example.Json;
+using JsonByExampleGenerator.Example.Json.Products;
+using JsonByExampleGenerator.Example.Json.Appsettings;
 using Microsoft.Extensions.Configuration;
 
 namespace JsonByExampleGenerator.Example

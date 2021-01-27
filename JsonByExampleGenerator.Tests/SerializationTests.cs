@@ -81,8 +81,8 @@ namespace Example
             streamWriter.Flush();
             readStream.Position = 0;
     
-            var ser = new DataContractJsonSerializer(typeof(TestImplementation.Json.{rootTypeName}));
-            var rootType = (TestImplementation.Json.{rootTypeName}) ser.ReadObject(readStream);
+            var ser = new DataContractJsonSerializer(typeof(TestImplementation.Json.{rootTypeName}.{rootTypeName}));
+            var rootType = (TestImplementation.Json.{rootTypeName}.{rootTypeName}) ser.ReadObject(readStream);
             
             var writeStream = new MemoryStream();
             ser.WriteObject(writeStream, rootType);
@@ -109,8 +109,6 @@ namespace Example
 
             _output.WriteLine($"Expected: {jsonAsString}");
             _output.WriteLine($"Actual: {actualAsString}");
-            File.WriteAllText("D:\\expected.json", jsonAsString);
-            File.WriteAllText("D:\\actual.json", actualAsString);
 
             actual.Should().BeEquivalentTo(expected);
         }

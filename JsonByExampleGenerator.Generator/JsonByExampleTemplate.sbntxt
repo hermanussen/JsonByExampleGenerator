@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;{{ for OptionalDependency in OptionalDependencies}}
 using {{ OptionalDependency }};
 {{ end }}
-namespace {{ NamespaceName }}.Json
+namespace {{ NamespaceName }}
 {
 {{ for ClassModel in ClassModels }}
     [DataContract(Name = "{{ ClassModel.ClassName }}", Namespace = "{{ NamespaceName }}")]

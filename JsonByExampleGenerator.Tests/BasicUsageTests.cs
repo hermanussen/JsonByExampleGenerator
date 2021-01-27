@@ -25,7 +25,7 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.Example()
+            var json = new TestImplementation.Json.Example.Example()
                 {
                     Prop = ""propval""
                 };
@@ -52,7 +52,7 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.Example()
+            var json = new TestImplementation.Json.Example.Example()
                 {
                     PropSpace = ""propval""
                 };
@@ -79,7 +79,7 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.Example()
+            var json = new TestImplementation.Json.Example.Example()
                 {
                     PropNum = 800000,
                     PropNumDecimals = 3.14
@@ -107,7 +107,7 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.Example()
+            var json = new TestImplementation.Json.Example.Example()
                 {
                     PropTrue = true,
                     PropFalse = false
@@ -135,10 +135,10 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.Example()
+            var json = new TestImplementation.Json.Example.Example()
                 {
                     PropNull = new object(),
-                    PropObject = new TestImplementation.Json.PropObject()
+                    PropObject = new TestImplementation.Json.Example.PropObject()
                 };
             return $""{json.PropNull} {json.PropObject}"";
         }
@@ -149,7 +149,7 @@ namespace Example
                     { "example.json", "{ \"propNull\" : null, \"propObject\" : {} }" }
                 });
 
-            Assert.Equal("System.Object TestImplementation.Json.PropObject", RunTest(compilation));
+            Assert.Equal("System.Object TestImplementation.Json.Example.PropObject", RunTest(compilation));
         }
 
         [Fact]
@@ -164,8 +164,8 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.Example();
-            json.Violins.Add(new TestImplementation.Json.Violin()
+            var json = new TestImplementation.Json.Example.Example();
+            json.Violins.Add(new TestImplementation.Json.Example.Violin()
                                 {
                                     Name = ""My violin""
                                 });
@@ -193,7 +193,7 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.Example();
+            var json = new TestImplementation.Json.Example.Example();
             json.Violins.Add(""My violin"");
             json.NumberSequence.Add(33);
             json.BoolSequence.Add(true);
@@ -221,8 +221,8 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.Example();
-            json.Violins.Add(new TestImplementation.Json.Violin()
+            var json = new TestImplementation.Json.Example.Example();
+            json.Violins.Add(new TestImplementation.Json.Example.Violin()
                                 {
                                     Name = ""My violin"",
                                     AnotherProperty = 1337
@@ -251,7 +251,7 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.Violin()
+            var json = new TestImplementation.Json.Violins.Violin()
                 {
                     Name = ""My violin"",
                     AnotherProperty = 1337
@@ -280,9 +280,9 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.Example()
+            var json = new TestImplementation.Json.Example.Example()
                 {
-                    Violin = new TestImplementation.Json.Violin()
+                    Violin = new TestImplementation.Json.Example.Violin()
                         {
                             Name = ""First""
                         }
@@ -311,11 +311,11 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.Example()
+            var json = new TestImplementation.Json.Example.Example()
                 {
-                    Violins = new System.Collections.Generic.List<TestImplementation.Json.Violin>()
+                    Violins = new System.Collections.Generic.List<TestImplementation.Json.Example.Violin>()
                         {
-                            new TestImplementation.Json.Violin()
+                            new TestImplementation.Json.Example.Violin()
                             {
                                 ViolinProperty = ""First""
                             }
@@ -345,7 +345,7 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.Violin()
+            var json = new TestImplementation.Json.Violin.Violin()
                 {
                     ViolinProperty = ""First"",
                     ViolinProperty2 = ""Second"",

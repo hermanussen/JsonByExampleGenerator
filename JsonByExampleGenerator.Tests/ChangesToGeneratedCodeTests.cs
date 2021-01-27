@@ -8,6 +8,9 @@ using Xunit.Abstractions;
 
 namespace JsonByExampleGenerator.Tests
 {
+    /// <summary>
+    /// Tests relating to customizing code generation using partial classes.
+    /// </summary>
     public class ChangesToGeneratedCodeTests : TestsBase
     {
         public ChangesToGeneratedCodeTests(ITestOutputHelper output) : base(output)
@@ -20,7 +23,7 @@ namespace JsonByExampleGenerator.Tests
             string source = @"using System;
 using System.Runtime.Serialization;
 
-namespace TestImplementation.Json
+namespace TestImplementation.Json.Example
 {
     public partial class Example
     {
@@ -40,7 +43,7 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.Example()
+            var json = new TestImplementation.Json.Example.Example()
                 {
                     Prop = 111,
                     YetAnother = 33
@@ -62,7 +65,7 @@ namespace Example
         {
             string source = @"using System;
 
-namespace TestImplementation.Json
+namespace TestImplementation.Json.Example
 {
     [JsonRenamedFrom(""Example"")]
     public partial class DifferentName
@@ -76,7 +79,7 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.DifferentName()
+            var json = new TestImplementation.Json.Example.DifferentName()
                 {
                     Prop = ""testval""
                 };
@@ -100,7 +103,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace TestImplementation.Json
+namespace TestImplementation.Json.Example
 {
     [JsonRenamedFrom(""WeirdProduct"")]
     public partial class Product
@@ -119,17 +122,17 @@ namespace Example
     {
         public static string RunTest()
         {
-            var json = new TestImplementation.Json.Example()
+            var json = new TestImplementation.Json.Example.Example()
                 {
                     Prop = ""testval"",
-                    WeirdProduct = new TestImplementation.Json.Product()
+                    WeirdProduct = new TestImplementation.Json.Example.Product()
                         {
                             ProductId = 2,
                             Name = ""Example product 2""
                         },
-                    WeirdAnimals = new List<TestImplementation.Json.Animal>()
+                    WeirdAnimals = new List<TestImplementation.Json.Example.Animal>()
                         {
-                            new TestImplementation.Json.Animal()
+                            new TestImplementation.Json.Example.Animal()
                                 {
                                     Name = ""Octopus""
                                 }
