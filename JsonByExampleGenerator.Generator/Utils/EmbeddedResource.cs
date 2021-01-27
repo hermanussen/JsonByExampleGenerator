@@ -10,18 +10,18 @@ namespace JsonByExampleGenerator.Generator.Utils
     /// Implementation of this helper method adapted from:
     /// https://www.cazzulino.com/source-generators.html
     /// </summary>
-    internal static class EmbeddedResource
+    public static class EmbeddedResource
     {
-        public static string GetContent(string relativePath)
+        public static string GetContent(string relativePath, Assembly? assembly = null)
         {
-            var baseName = Assembly.GetExecutingAssembly().GetName().Name;
+            assembly ??= Assembly.GetExecutingAssembly();
+            var baseName = assembly.GetName().Name;
             var resourceName = relativePath
                 .TrimStart('.')
                 .Replace(Path.DirectorySeparatorChar, '.')
                 .Replace(Path.AltDirectorySeparatorChar, '.');
 
-            using var stream = Assembly.GetExecutingAssembly()
-                .GetManifestResourceStream(baseName + "." + resourceName);
+            using var stream = assembly.GetManifestResourceStream($"{baseName}.{resourceName}");
 
             if (stream == null)
             {

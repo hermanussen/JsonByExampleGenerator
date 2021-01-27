@@ -18,18 +18,18 @@ namespace JsonByExampleGenerator.Tests
         public void ShouldGenerateWithChangedPropertyTypeOrName()
         {
             string source = @"using System;
-using System.Text.Json.Serialization;
+using System.Runtime.Serialization;
 
 namespace TestImplementation.Json
 {
     public partial class Example
     {
         // Change the type to int, instead of string
-        [JsonPropertyName(""prop"")]
+        [DataMember(Name = ""prop"")]
         public int Prop { get; set; }
 
         // Change the name of the property, but reference json property properly
-        [JsonPropertyName(""another"")]
+        [DataMember(Name = ""another"")]
         public int YetAnother { get; set; }
     }
 }
@@ -61,7 +61,6 @@ namespace Example
         public void ShouldGenerateWithChangedClassName()
         {
             string source = @"using System;
-using System.Text.Json.Serialization;
 
 namespace TestImplementation.Json
 {

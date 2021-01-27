@@ -4,8 +4,31 @@
     <TargetFramework>net5.0</TargetFramework>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="RealWorldExamples\jsonOrgExample1.json" />
+    <None Remove="RealWorldExamples\jsonOrgExample2.json" />
+    <None Remove="RealWorldExamples\jsonOrgExample3.json" />
+    <None Remove="RealWorldExamples\jsonOrgExample4.json" />
+    <None Remove="RealWorldExamples\jsonOrgExample5.json" />
+    <None Remove="RealWorldExamples\sitepointColorsExample.json" />
+    <None Remove="RealWorldExamples\sitepointGoogleMapsExample.json" />
+    <None Remove="RealWorldExamples\sitepointYoutubeExample.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="RealWorldExamples\jsonOrgExample5.json" />
+    <EmbeddedResource Include="RealWorldExamples\jsonOrgExample4.json" />
+    <EmbeddedResource Include="RealWorldExamples\jsonOrgExample3.json" />
+    <EmbeddedResource Include="RealWorldExamples\jsonOrgExample2.json" />
+    <EmbeddedResource Include="RealWorldExamples\jsonOrgExample1.json" />
+    <EmbeddedResource Include="RealWorldExamples\sitepointYoutubeExample.json" />
+    <EmbeddedResource Include="RealWorldExamples\sitepointGoogleMapsExample.json" />
+    <EmbeddedResource Include="RealWorldExamples\sitepointColorsExample.json" />
+  </ItemGroup>
   
   <ItemGroup>
+    <PackageReference Include="FluentAssertions.Json" Version="5.5.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

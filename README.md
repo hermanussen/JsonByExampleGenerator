@@ -106,10 +106,15 @@ Appsetting.FromConfig(config).Something.SomeValue
 ## Use your own Scriban template instead of the default one
 
 If you have specific needs for the generated code, you can easily create a [Scriban](https://github.com/scriban/scriban) template to replace the default one. All you have to do is:
-- Create a file with the same name as your example json file, but with the extension `.sbntxt` instead of `.json`.
-- Ensure that the file is included in the `AdditionalFiles` for your project (the same way that you include your json files).
-- Copy the contents of the [default template](JsonByExampleGenerator.Generator/JsonByExampleTemplate.sbntxt), paste them in the file and save.
-- Change the template in any way you want, and you should observe the changes when you build your project.
+1. Create a file with the same name as your example json file, but with the extension `.sbntxt` instead of `.json`.
+2. Ensure that the file is included in the `AdditionalFiles` for your project (the same way that you include your json files).
+3. Copy the contents of the [default template](JsonByExampleGenerator.Generator/JsonByExampleTemplate.sbntxt), paste them in the file and save.
+4. Change the template in any way you want, and you should observe the changes when you build your project.
+
+If you want to change the code generation for all json files in a folder or the whole project (instead of adjusting for a single json file), you can use the following alternative step instead of step 1:
+1. Create a file named `JsonByExampleTemplate.sbntxt` and place it in the folder where your json files are. If the template file is not there, the generator will go up one parent folder until it finds one (but will not go past the project root). Don't forget the other steps defined above.
+
+There is also a template that is used to generate some global project code. If you want to change that, you can create a file named `OnlyOnceTemplate.sbntxt` in the root of your project. Make sure it is included in `AdditionalFiles`. Copy the contents of the default version [from here](JsonByExampleGenerator.Generator/OnlyOnceTemplate.sbntxt).
 
 ## Manually change the type or name of properties
 
@@ -134,8 +139,8 @@ namespace MyNs.Json
 {
   public partial class Product
   {
-    // Based on the attribute, the generator knows not to generate this property
-    [JsonPropertyName("id")]
+    // Based on the value of the name in the attribute, the generator knows not to generate this property
+    [DataMember(Name = "id")]
     public int Id { get; set; }
   }
 }
@@ -159,6 +164,7 @@ By default, it will render something like this:
 ```csharp
 namespace MyNs.Json
 {
+  [DataContract]
   public partial class Product
   {
     // ...

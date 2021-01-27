@@ -47,7 +47,7 @@ namespace JsonByExampleGenerator.Tests
             }
         }
 
-        private readonly ITestOutputHelper _output;
+        protected readonly ITestOutputHelper _output;
         private static List<MetadataReference>? _metadataReferences;
         private static readonly object Lock = new object();
 

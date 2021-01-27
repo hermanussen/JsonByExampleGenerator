@@ -14,6 +14,8 @@ using System.Globalization;
 using Scriban;
 using JsonByExampleGenerator.Generator.Utils;
 using System.Text.Json.Serialization;
+using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
 
 namespace JsonByExampleGenerator.Generator
 {
@@ -23,7 +25,9 @@ namespace JsonByExampleGenerator.Generator
     [Generator]
     public class JsonGenerator : ISourceGenerator
     {
-        private static readonly IPluralize _pluralizer = new Pluralizer();
+        private static readonly IPluralize pluralizer = new Pluralizer();
+        private static readonly char[] forbiddenCharacters = new[] { ' ', '-', ':', ';' };
+        private static readonly Regex parseNumberFromPropertyName = new Regex("(.*Property)([0-9]+)", RegexOptions.Compiled);
 
         /// <summary>
         /// Executes the generator logic during compilation
@@ -48,11 +52,13 @@ namespace JsonByExampleGenerator.Generator
 
                 // Generate code that should only be generated once
                 const string onlyOnceTemplatePath = "OnlyOnceTemplate.sbntxt";
-                var onlyOnceTemplate = Template.Parse(EmbeddedResource.GetContent(onlyOnceTemplatePath), onlyOnceTemplatePath);
+                var onlyOnceTemplateContent = GetTemplateContent(context, onlyOnceTemplatePath)
+                    ?? EmbeddedResource.GetContent(onlyOnceTemplatePath);
+                var onlyOnceTemplate = Template.Parse(onlyOnceTemplateContent, onlyOnceTemplatePath);
                 string onlyOnceGeneratedCode = onlyOnceTemplate.Render(new
-                {
-                    NamespaceName = namespaceName
-                }, member => member.Name);
+                    {
+                        NamespaceName = namespaceName
+                    }, member => member.Name);
 
                 // Add the generated code to the compilation
                 context.AddSource($"{namespaceName}_onlyonce.gen.cs",
@@ -75,16 +81,28 @@ namespace JsonByExampleGenerator.Generator
                     string rootTypeName = GetValidName(Path.GetFileNameWithoutExtension(jsonFile.Path).Replace(" ", string.Empty), true);
                     ResolveTypeRecursive(context, classModels, jsonElement, rootTypeName);
 
-
                     // Attempt to find a Scriban template in the AdditionalFiles that has the same name as the json
-                    string templateFileName = $"{Path.GetFileNameWithoutExtension(jsonFile.Path)}.sbntxt";
-                    string? templateContent = context
-                        .AdditionalFiles
-                        .FirstOrDefault(f => Path
-                            .GetFileName(f.Path)
-                            .Equals(templateFileName, StringComparison.InvariantCultureIgnoreCase))
-                        ?.GetText(context.CancellationToken)
-                        ?.ToString();
+                    string templateFileName = $"{Path.Combine(Path.GetDirectoryName(jsonFile.Path), Path.GetFileNameWithoutExtension(jsonFile.Path))}.sbntxt";
+                    string? templateContent = GetTemplateContent(context, templateFileName);
+                    if (string.IsNullOrWhiteSpace(templateContent))
+                    {
+                        var pathRoot = Path.GetPathRoot(jsonFile.Path);
+                        var pathParts = Path.GetDirectoryName(jsonFile.Path).Split(new[] { Path.DirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+                        const string directorySbnFileName = "JsonByExampleTemplate.sbntxt";
+                        do
+                        {
+                            var filePath = string.IsNullOrWhiteSpace(pathRoot)
+                                ? Path.Combine(Path.Combine(pathParts), directorySbnFileName)
+                                : Path.Combine(pathRoot, Path.Combine(pathParts.Skip(1).ToArray()), directorySbnFileName);
+                            templateContent = GetTemplateContent(context, filePath);
+
+                            if (!pathParts.Any())
+                            {
+                                break;
+                            }
+                            Array.Resize(ref pathParts, pathParts.Length - 1);
+                        } while (string.IsNullOrWhiteSpace(templateContent));
+                    }
 
                     Template template;
                     if (templateContent != null)
@@ -132,6 +150,36 @@ namespace JsonByExampleGenerator.Generator
                         isEnabledByDefault: true), 
                     Location.None));
             }
+        }
+
+        /// <summary>
+        /// Find the contents of a template file in the AdditionalFiles.
+        /// </summary>
+        /// <param name="context">The generator context, that contains additional files</param>
+        /// <param name="templatePath">The path to the template</param>
+        /// <returns></returns>
+        private string? GetTemplateContent(GeneratorExecutionContext context, string templatePath)
+        {
+            return context
+                .AdditionalFiles
+                .Where(f =>
+                    {
+                        string compilationPath = Path.GetFullPath(".");
+                        string fullPath = Path.GetFullPath(f.Path);
+                        string fullTemplatePath = Path.GetFullPath(templatePath);
+
+                        if (!fullPath.StartsWith(compilationPath)
+                            || !fullTemplatePath.StartsWith(compilationPath))
+                        {
+                            // Don't allow paths outside the current compilation
+                            return false;
+                        }
+
+                        return fullPath.Equals(fullTemplatePath, StringComparison.InvariantCultureIgnoreCase);
+                    })
+                .FirstOrDefault()
+                ?.GetText(context.CancellationToken)
+                ?.ToString();
         }
 
         /// <summary>
@@ -197,16 +245,16 @@ namespace JsonByExampleGenerator.Generator
                 var existingClass = compilation.GetTypeByMetadataName($"{namespaceName}.Json.{classModel.ClassName}");
                 if(existingClass != null)
                 {
-                    // Find all JsonPropertyName decorations
+                    // Find all DataMember decorations
                     var jsonProperties = existingClass
                         .GetMembers()
                         .OfType<IPropertySymbol>()
                         .SelectMany(m => m
                             .GetAttributes()
                             .Where(a =>
-                                string.Equals(nameof(JsonPropertyNameAttribute), a.AttributeClass?.Name, StringComparison.InvariantCulture)
-                                || string.Equals("JsonPropertyName", a.AttributeClass?.Name, StringComparison.InvariantCulture))
-                            .Select(a => a.ConstructorArguments.FirstOrDefault().Value?.ToString())
+                                string.Equals(nameof(DataMemberAttribute), a.AttributeClass?.Name, StringComparison.InvariantCulture)
+                                || string.Equals("DataMember", a.AttributeClass?.Name, StringComparison.InvariantCulture))
+                            .Select(a => a.NamedArguments.FirstOrDefault(x => x.Key == "Name").Value.Value?.ToString())
                             .Where(a => a != null));
                     if(jsonProperties != null)
                     {
@@ -256,77 +304,83 @@ namespace JsonByExampleGenerator.Generator
                 return;
             }
 
-            // Iterate the properties of the json element, they will become model properties
-            foreach (JsonProperty prop in jsonElement.EnumerateObject())
+            if (jsonElement.ValueKind == JsonValueKind.Object)
             {
-                string propName = GetValidName(prop.Name);
-                if (propName.Length > 0)
+                int orderCounter = 0;
+
+                // Iterate the properties of the json element, they will become model properties
+                foreach (JsonProperty prop in jsonElement.EnumerateObject())
                 {
-                    PropertyModel propertyModel;
-
-                    // The json value kind of the property determines how to map it to a C# type
-                    switch (prop.Value.ValueKind)
+                    string propName = RenameIfDuplicateOrConflicting(GetValidName(prop.Name), classModel);
+                    
+                    if (propName.Length > 0)
                     {
-                        case JsonValueKind.Array:
-                            {
-                                string arrPropName = GetValidName(prop.Name, true);
+                        PropertyModel propertyModel;
 
-                                // Look at the first element in the array to determine the type of the array
-                                var arrEnumerator = prop.Value.EnumerateArray();
-                                if(arrEnumerator.MoveNext())
+                        // The json value kind of the property determines how to map it to a C# type
+                        switch (prop.Value.ValueKind)
+                        {
+                            case JsonValueKind.Array:
                                 {
-                                    if (arrEnumerator.Current.ValueKind == JsonValueKind.Number)
-                                    {
-                                        arrPropName = FindBestNumericType(arrEnumerator.Current);
-                                    }
-                                    else if (arrEnumerator.Current.ValueKind == JsonValueKind.String)
-                                    {
-                                        arrPropName = FindBestStringType(arrEnumerator.Current);
-                                    }
-                                    else if (arrEnumerator.Current.ValueKind == JsonValueKind.True || arrEnumerator.Current.ValueKind == JsonValueKind.False)
-                                    {
-                                        arrPropName = "bool";
-                                    }
-                                    else
-                                    {
-                                        ResolveTypeRecursive(context, classModels, prop.Value, arrPropName);
-                                    }
+                                    string arrPropName = GetValidName(prop.Name, true);
 
-                                    propertyModel = new PropertyModel(prop.Name, $"IList<{arrPropName}>", propName)
+                                    // Look at the first element in the array to determine the type of the array
+                                    var arrEnumerator = prop.Value.EnumerateArray();
+                                    if (arrEnumerator.MoveNext())
+                                    {
+                                        if (arrEnumerator.Current.ValueKind == JsonValueKind.Number)
+                                        {
+                                            arrPropName = FindBestNumericType(arrEnumerator.Current);
+                                        }
+                                        else if (arrEnumerator.Current.ValueKind == JsonValueKind.String)
+                                        {
+                                            arrPropName = FindBestStringType(arrEnumerator.Current);
+                                        }
+                                        else if (arrEnumerator.Current.ValueKind == JsonValueKind.True || arrEnumerator.Current.ValueKind == JsonValueKind.False)
+                                        {
+                                            arrPropName = "bool";
+                                        }
+                                        else
+                                        {
+                                            ResolveTypeRecursive(context, classModels, prop.Value, arrPropName);
+                                        }
+
+                                        propertyModel = new PropertyModel(prop.Name, $"IList<{arrPropName}>", propName, orderCounter++)
                                         {
                                             Init = $"new List<{arrPropName}>()"
                                         };
-                                }
-                                else
-                                {
-                                    propertyModel = new PropertyModel(prop.Name, $"IList<object>", propName)
+                                    }
+                                    else
+                                    {
+                                        propertyModel = new PropertyModel(prop.Name, $"IList<object>", propName, orderCounter++)
                                         {
                                             Init = $"new List<object>()"
                                         };
+                                    }
+
+                                    break;
                                 }
+                            case JsonValueKind.String: propertyModel = new PropertyModel(prop.Name, FindBestStringType(prop.Value), propName, orderCounter++); break;
+                            case JsonValueKind.Number: propertyModel = new PropertyModel(prop.Name, FindBestNumericType(prop.Value), propName, orderCounter++); break;
+                            case JsonValueKind.False:
+                            case JsonValueKind.True: propertyModel = new PropertyModel(prop.Name, "bool", propName, orderCounter++); break;
+                            case JsonValueKind.Object:
+                                {
+                                    string objectPropName = GetValidName(prop.Name, true);
 
-                                break;
-                            }
-                        case JsonValueKind.String: propertyModel = new PropertyModel(prop.Name, FindBestStringType(prop.Value), propName); break;
-                        case JsonValueKind.Number: propertyModel = new PropertyModel(prop.Name, FindBestNumericType(prop.Value), propName); break;
-                        case JsonValueKind.False:
-                        case JsonValueKind.True: propertyModel = new PropertyModel(prop.Name, "bool", propName); break;
-                        case JsonValueKind.Object:
-                            {
-                                string objectPropName = GetValidName(prop.Name, true);
+                                    // Create a separate type for objects
+                                    ResolveTypeRecursive(context, classModels, prop.Value, objectPropName);
 
-                                // Create a separate type for objects
-                                ResolveTypeRecursive(context, classModels, prop.Value, objectPropName);
+                                    propertyModel = new PropertyModel(prop.Name, objectPropName, propName, orderCounter++);
+                                    break;
+                                }
+                            case JsonValueKind.Undefined:
+                            case JsonValueKind.Null:
+                            default: propertyModel = new PropertyModel(prop.Name, "object", propName, orderCounter++); break;
+                        }
 
-                                propertyModel = new PropertyModel(prop.Name, objectPropName, propName);
-                                break;
-                            }
-                        case JsonValueKind.Undefined:
-                        case JsonValueKind.Null:
-                        default: propertyModel = new PropertyModel(prop.Name, "object", propName); break;
+                        classModel.Properties.Add(propertyModel);
                     }
-
-                    classModel.Properties.Add(propertyModel);
                 }
             }
 
@@ -341,6 +395,32 @@ namespace JsonByExampleGenerator.Generator
                 // No need to merge, just add the new class model
                 classModels.Add(classModel);
             }
+        }
+
+        private static string RenameIfDuplicateOrConflicting(string propertyName, ClassModel classModel)
+        {
+            const string postFix = "Property";
+            string newPropertyName = propertyName;
+            if(string.Equals(propertyName, classModel.ClassName, StringComparison.InvariantCulture))
+            {
+                // Property name conflicts with class name, so add a postfix
+                newPropertyName = $"{propertyName}{postFix}";
+            }
+
+            while(classModel.Properties.Any(p => p.PropertyName == newPropertyName))
+            {
+                var match = parseNumberFromPropertyName.Match(newPropertyName);
+                if (match.Success)
+                {
+                    newPropertyName = $"{match.Groups[1].Value}{int.Parse(match.Groups[2].Value) + 1}";
+                }
+                else
+                {
+                    newPropertyName = $"{newPropertyName}2";
+                }
+            }
+
+            return newPropertyName;
         }
 
         /// <summary>
@@ -401,17 +481,17 @@ namespace JsonByExampleGenerator.Generator
         private static string GetValidName(string typeName, bool singularize = false)
         {
             // Make a plural form singular using Pluralize.NET
-            if (singularize && _pluralizer.IsPlural(typeName))
+            if (singularize && pluralizer.IsPlural(typeName))
             {
-                typeName = _pluralizer.Singularize(typeName);
+                typeName = pluralizer.Singularize(typeName);
             }
 
             List<char> newTypeName = new List<char>();
             bool nextCharUpper = true;
             for(int i = 0; i < typeName.Length; i++)
             {
-                // Strip spaces
-                if (typeName[i] == ' ')
+                // Strip spaces and other characters
+                if (forbiddenCharacters.Contains(typeName[i]))
                 {
                     nextCharUpper = true;
                     continue;

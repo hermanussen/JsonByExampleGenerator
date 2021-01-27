@@ -298,5 +298,70 @@ namespace Example
 
             Assert.Equal("First", RunTest(compilation));
         }
+
+        [Fact]
+        public void ShouldGeneratePropertyNameDifferentFromClassName()
+        {
+            string source = @"using System;
+using System.Linq;
+
+namespace Example
+{
+    class Test
+    {
+        public static string RunTest()
+        {
+            var json = new TestImplementation.Json.Example()
+                {
+                    Violins = new System.Collections.Generic.List<TestImplementation.Json.Violin>()
+                        {
+                            new TestImplementation.Json.Violin()
+                            {
+                                ViolinProperty = ""First""
+                            }
+                        }
+                };
+            return $""{json.Violins.First().ViolinProperty}"";
+        }
+    }
+}";
+            var compilation = GetGeneratedOutput(source, new Dictionary<string, string>()
+                {
+                    { "example.json", "{ \"violins\" : [{ \"violin\" : \"First\" } ] }" }
+                });
+
+            Assert.Equal("First", RunTest(compilation));
+        }
+
+        [Fact]
+        public void ShouldGenerateDistinctPropertyName()
+        {
+            string source = @"using System;
+using System.Linq;
+
+namespace Example
+{
+    class Test
+    {
+        public static string RunTest()
+        {
+            var json = new TestImplementation.Json.Violin()
+                {
+                    ViolinProperty = ""First"",
+                    ViolinProperty2 = ""Second"",
+                    ViolinProperty3 = ""Third"",
+                    ViolinProperty4 = ""Fourth""
+                };
+            return $""{json.ViolinProperty} {json.ViolinProperty2} {json.ViolinProperty3} {json.ViolinProperty4}"";
+        }
+    }
+}";
+            var compilation = GetGeneratedOutput(source, new Dictionary<string, string>()
+                {
+                    { "violin.json", "{ \"violin\" : \"First\", \"violinProperty\" : \"Second\", \"violinProperty2\" : \"Third\", \"violinProperty3\" : \"Fourth\" }" }
+                });
+
+            Assert.Equal("First Second Third Fourth", RunTest(compilation));
+        }
     }
 }

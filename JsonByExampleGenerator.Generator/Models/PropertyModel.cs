@@ -27,16 +27,23 @@
         public string? Init { get; internal set; }
 
         /// <summary>
+        /// The order for output in json.
+        /// </summary>
+        public int Order { get; private set; }
+
+        /// <summary>
         /// Create a new instance of the class.
         /// </summary>
         /// <param name="propertyNameOriginal">The original (unsafe) property name</param>
         /// <param name="propertyType">The C# type of the property</param>
         /// <param name="propertyName">The C# safe name of the property</param>
-        public PropertyModel(string propertyNameOriginal, string propertyType, string propertyName)
+        /// <param name="order">The order for output</param>
+        public PropertyModel(string propertyNameOriginal, string propertyType, string propertyName, int order)
         {
             PropertyNameOriginal = propertyNameOriginal;
             PropertyType = propertyType;
             PropertyName = propertyName;
+            Order = order;
         }
     }
 }

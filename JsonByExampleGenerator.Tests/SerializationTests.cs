@@ -1,5 +1,9 @@
-﻿using System;
+﻿using FluentAssertions;
+using JsonByExampleGenerator.Generator.Utils;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +21,8 @@ namespace JsonByExampleGenerator.Tests
         [Fact]
         public void ShouldSerializeAndDeserialize()
         {
-            string jsonProduct = @"{
+            const string rootTypeName = "Product";
+            string jsonAsString = @"{
                             ""id"": 12,
                             ""name"": ""Example_product"",
                             ""region"": {
@@ -38,7 +43,31 @@ namespace JsonByExampleGenerator.Tests
                             ]
                           }";
 
+            DeserializeSerializeAndAssert(rootTypeName, jsonAsString, "product.json");
+        }
+
+        [Theory]
+        [InlineData("JsonOrgExample1", "RealWorldExamples/jsonOrgExample1.json")]
+        [InlineData("JsonOrgExample2", "RealWorldExamples/jsonOrgExample2.json")]
+        [InlineData("JsonOrgExample3", "RealWorldExamples/jsonOrgExample3.json")]
+        [InlineData("JsonOrgExample4", "RealWorldExamples/jsonOrgExample4.json")]
+        [InlineData("JsonOrgExample5", "RealWorldExamples/jsonOrgExample5.json")]
+        [InlineData("SitepointColorsExample", "RealWorldExamples/sitepointColorsExample.json")]
+        [InlineData("SitepointGoogleMapsExample", "RealWorldExamples/sitepointGoogleMapsExample.json")]
+        [InlineData("SitepointYoutubeExample", "RealWorldExamples/sitepointYoutubeExample.json")]
+        public void ShouldSerializeAndDeserializeFromFile(string rootTypeName, string jsonFilePath)
+        {
+            DeserializeSerializeAndAssert(
+                rootTypeName,
+                EmbeddedResource.GetContent(jsonFilePath, System.Reflection.Assembly.GetExecutingAssembly()),
+                Path.GetFileName(jsonFilePath));
+        }
+
+        private void DeserializeSerializeAndAssert(string rootTypeName, string jsonAsString, string fileName)
+        {
             string source = $@"using System;
+using System.IO;
+using System.Runtime.Serialization.Json;
 
 namespace Example
 {{
@@ -46,24 +75,44 @@ namespace Example
     {{
         public static string RunTest()
         {{
-            var product = System.Text.Json.JsonSerializer.Deserialize<TestImplementation.Json.Product>(@""{jsonProduct.Replace("\"", "\"\"")}"");
+            var readStream = new MemoryStream();
+            var streamWriter = new StreamWriter(readStream);
+            streamWriter.Write(@""{jsonAsString.Replace("\"", "\"\"")}"");
+            streamWriter.Flush();
+            readStream.Position = 0;
+    
+            var ser = new DataContractJsonSerializer(typeof(TestImplementation.Json.{rootTypeName}));
+            var rootType = (TestImplementation.Json.{rootTypeName}) ser.ReadObject(readStream);
             
-            var reserialized = System.Text.Json.JsonSerializer.Serialize(product);
+            var writeStream = new MemoryStream();
+            ser.WriteObject(writeStream, rootType);
+            writeStream.Position = 0;
+            var streamReader = new StreamReader(writeStream);
 
-            return $""{{reserialized}}"";
+            return $""{{streamReader.ReadToEnd()}}"".Replace(""\\/"", ""/"");
         }}
     }}
 }}";
-
+            
             var compilation = GetGeneratedOutput(source, new Dictionary<string, string>()
                 {
                     {
-                        "product.json",
-                        jsonProduct
+                        fileName,
+                        jsonAsString
                     }
                 });
 
-            Assert.Equal(jsonProduct.Replace(" ", string.Empty).Replace("\r", string.Empty).Replace("\n", string.Empty), RunTest(compilation));
+            string? actualAsString = RunTest(compilation);
+
+            JToken expected = JToken.Parse(jsonAsString);
+            JToken actual = JToken.Parse(actualAsString);
+
+            _output.WriteLine($"Expected: {jsonAsString}");
+            _output.WriteLine($"Actual: {actualAsString}");
+            File.WriteAllText("D:\\expected.json", jsonAsString);
+            File.WriteAllText("D:\\actual.json", actualAsString);
+
+            actual.Should().BeEquivalentTo(expected);
         }
     }
 }

@@ -1,15 +1,16 @@
 ﻿#nullable disable
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;{{ for OptionalDependency in OptionalDependencies}}
+using System.Runtime.Serialization;{{ for OptionalDependency in OptionalDependencies}}
 using {{ OptionalDependency }};
 {{ end }}
 namespace {{ NamespaceName }}.Json
 {
 {{ for ClassModel in ClassModels }}
+    [DataContract(Name = "{{ ClassModel.ClassName }}", Namespace = "{{ NamespaceName }}")]
     public partial class {{ ClassModel.ClassName }}
     {
-        {{ for Property in ClassModel.Properties }}[JsonPropertyName("{{ Property.PropertyNameOriginal }}")]
+        {{ for Property in ClassModel.Properties }}[DataMember(Name = "{{ Property.PropertyNameOriginal }}", EmitDefaultValue = false, Order = {{ Property.Order }})]
         public {{ Property.PropertyType }} {{ Property.PropertyName }} { get; set; }{{ if Property.Init }} = {{ Property.Init }};{{ end }}
         {{ end }}{{ if ConfigEnabled }}
         public static {{ ClassModel.ClassName }} FromConfig([System.Diagnostics.CodeAnalysis.NotNull] IConfiguration config)
