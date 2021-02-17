@@ -25,6 +25,10 @@ namespace JsonByExampleGenerator.Generator
     [Generator]
     public class JsonGenerator : ISourceGenerator
     {
+        private static readonly string RuntimeVersion = Environment.Version.ToString();
+        private static readonly string ToolName = typeof(JsonGenerator).Assembly.GetName().Name;
+        private static readonly string ToolVersion = typeof(JsonGenerator).Assembly.GetName().Version.ToString();
+
         private static readonly IPluralize pluralizer = new Pluralizer();
         private static readonly char[] forbiddenCharacters = new[] { ' ', '-', ':', ';' };
         private static readonly Regex parseNumberFromPropertyName = new Regex("(.*Property)([0-9]+)", RegexOptions.Compiled);
@@ -57,8 +61,11 @@ namespace JsonByExampleGenerator.Generator
                 var onlyOnceTemplate = Template.Parse(onlyOnceTemplateContent, onlyOnceTemplatePath);
                 string onlyOnceGeneratedCode = onlyOnceTemplate.Render(new
                     {
-                        NamespaceName = namespaceName
-                    }, member => member.Name);
+                        NamespaceName = namespaceName,
+                        RuntimeVersion = RuntimeVersion,
+                        ToolName = ToolName,
+                        ToolVersion = ToolVersion
+                }, member => member.Name);
 
                 // Add the generated code to the compilation
                 context.AddSource($"{namespaceName}_onlyonce.gen.cs",
@@ -132,7 +139,10 @@ namespace JsonByExampleGenerator.Generator
                         OptionalDependencies = optionalDependencies,
                         NamespaceName = deeperNamespaceName,
                         ConfigEnabled = configEnabled,
-                        ClassModels = classModels
+                        ClassModels = classModels,
+                        RuntimeVersion = RuntimeVersion,
+                        ToolName = ToolName,
+                        ToolVersion = ToolVersion
                     }, member => member.Name);
 
                     // Add the generated code to the compilation

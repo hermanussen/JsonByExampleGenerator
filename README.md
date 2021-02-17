@@ -121,7 +121,7 @@ There is also a template that is used to generate some global project code. If y
 
 ## Manually change the type or name of properties
 
-Sometimes you may not like the name of the property or the type that is used. For example, if you want a `DateTime` instead of a `string` or a `int` instead of a `double`. The generator cannot detect this based on examples.
+Sometimes you may not like the name of the property or the type that is used. For example, if you want a `long` instead of an `int`. The generator has to guess, based on example data. And that may not always have the desired result.
 
 You can fix this by specifying the property exactly how you want it in a partial class. Example:
 
@@ -144,7 +144,7 @@ namespace MyNs.Json.Products
   {
     // Based on the value of the name in the attribute, the generator knows not to generate this property
     [DataMember(Name = "id")]
-    public int Id { get; set; }
+    public long Id { get; set; } // Generates 'int' by default
   }
 }
 ```
@@ -178,6 +178,8 @@ namespace MyNs.Json.Products
 You can specify this partial class:
 
 ```csharp
+using MyNs.Json;
+
 namespace MyNs.Json.Products
 {
   [JsonRenamedFrom("Product")]
