@@ -30,7 +30,7 @@ namespace JsonByExampleGenerator.Generator
         private static readonly string ToolVersion = typeof(JsonGenerator).Assembly.GetName().Version.ToString();
 
         private static readonly IPluralize pluralizer = new Pluralizer();
-        private static readonly char[] forbiddenCharacters = new[] { ' ', '-', ':', ';' };
+        private static readonly char[] forbiddenCharacters = new[] { ' ', '-', ':', ';', '.' };
         private static readonly Regex parseNumberFromPropertyName = new Regex("(.*Property)([0-9]+)", RegexOptions.Compiled);
 
         /// <summary>
@@ -570,7 +570,13 @@ namespace JsonByExampleGenerator.Generator
                 newTypeName.Add(typeName[i]);
             }
 
-            return new string(newTypeName.ToArray());
+            string validName = new string(newTypeName.ToArray());
+            if (validName == "System")
+            {
+                return "SystemX";
+            }
+
+            return validName;
         }
 
         /// <summary>
