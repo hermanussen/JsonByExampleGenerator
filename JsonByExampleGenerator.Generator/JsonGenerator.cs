@@ -146,7 +146,7 @@ namespace JsonByExampleGenerator.Generator
                     }, member => member.Name);
 
                     // Add the generated code to the compilation
-                    context.AddSource(GetSourceFileName(namespaceName, jsonFile.Path),
+                    context.AddSource(GetSourceFileName(jsonFile.Path),
                         SourceText.From(generatedCode, Encoding.UTF8));
                 }
             }
@@ -196,10 +196,9 @@ namespace JsonByExampleGenerator.Generator
         /// <summary>
         /// Ensure a unique name for the added source file for the compilation.
         /// </summary>
-        /// <param name="namespaceName">The namespace in code</param>
         /// <param name="path">The path of the json file</param>
         /// <returns></returns>
-        private string GetSourceFileName(string namespaceName, string path)
+        private string GetSourceFileName(string path)
         {
             var fullPath = Path.GetFullPath(path)
                 .Replace(Path.GetFullPath("."), string.Empty)
@@ -207,7 +206,7 @@ namespace JsonByExampleGenerator.Generator
                 .Replace("\\", "_")
                 .Replace(".", "_");
 
-            return $"{namespaceName}_{fullPath.Trim('_')}.gen.cs";
+            return $"{fullPath.Trim('_')}.gen.cs";
         }
 
         /// <summary>
