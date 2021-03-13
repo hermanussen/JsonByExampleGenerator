@@ -204,7 +204,8 @@ namespace JsonByExampleGenerator.Generator
                 .Replace(Path.GetFullPath("."), string.Empty)
                 .Replace("/", "_")
                 .Replace("\\", "_")
-                .Replace(".", "_");
+                .Replace(".", "_")
+                .Replace(":", "_");
 
             return $"{fullPath.Trim('_')}.gen.cs";
         }

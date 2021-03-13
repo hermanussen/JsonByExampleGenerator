@@ -63,7 +63,18 @@ namespace JsonByExampleGenerator.Tests
                 Path.GetFileName(jsonFilePath));
         }
 
-        private void DeserializeSerializeAndAssert(string rootTypeName, string jsonAsString, string fileName)
+        [Fact]
+        public void ShouldSerializeAndDeserializeFromFileWithAbsolutePath()
+        {
+            const string relativePath = "RealWorldExamples/jsonOrgExample1.json";
+            DeserializeSerializeAndAssert(
+                "JsonOrgExample1",
+                EmbeddedResource.GetContent(relativePath, System.Reflection.Assembly.GetExecutingAssembly()),
+                Path.Combine("C:\\temp", Path.GetFileName(relativePath)),
+                "C.Temp.");
+        }
+
+        private void DeserializeSerializeAndAssert(string rootTypeName, string jsonAsString, string fileName, string prefixPath = "")
         {
             string source = $@"using System;
 using System.IO;
@@ -80,9 +91,8 @@ namespace Example
             streamWriter.Write(@""{jsonAsString.Replace("\"", "\"\"")}"");
             streamWriter.Flush();
             readStream.Position = 0;
-    
-            var ser = new DataContractJsonSerializer(typeof(TestImplementation.Json.{rootTypeName}.{rootTypeName}));
-            var rootType = (TestImplementation.Json.{rootTypeName}.{rootTypeName}) ser.ReadObject(readStream);
+            var ser = new DataContractJsonSerializer(typeof(TestImplementation.Json.{prefixPath}{rootTypeName}.{rootTypeName}));
+            var rootType = (TestImplementation.Json.{prefixPath}{rootTypeName}.{rootTypeName}) ser.ReadObject(readStream);
             
             var writeStream = new MemoryStream();
             ser.WriteObject(writeStream, rootType);
