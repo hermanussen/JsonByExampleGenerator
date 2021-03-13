@@ -4,6 +4,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -67,11 +68,14 @@ namespace JsonByExampleGenerator.Tests
         public void ShouldSerializeAndDeserializeFromFileWithAbsolutePath()
         {
             const string relativePath = "RealWorldExamples/jsonOrgExample1.json";
+            bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            var basePath = isWindows ? "C:\\temp" : "/etc";
+            var prefixPath = isWindows ? "C.Temp." : "Etc.";
             DeserializeSerializeAndAssert(
                 "JsonOrgExample1",
                 EmbeddedResource.GetContent(relativePath, System.Reflection.Assembly.GetExecutingAssembly()),
-                Path.Combine("C:\\temp", Path.GetFileName(relativePath)),
-                "C.Temp.");
+                Path.Combine(basePath, Path.GetFileName(relativePath)),
+                prefixPath);
         }
 
         private void DeserializeSerializeAndAssert(string rootTypeName, string jsonAsString, string fileName, string prefixPath = "")
