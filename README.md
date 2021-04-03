@@ -21,12 +21,12 @@ dotnet add package JsonByExampleGenerator
   <AdditionalFiles Include="products.json" />
 </ItemGroup>
 ```
-3. You can now use the generated classes in your code. Add a using statement for `[your_dll_name_without_extension].Json.[path_to_json_csharp_friendly]`. E.g.:
+3. You can now use the generated classes in your code. Add a using statement for `[your_dll_name_without_extension].Json.[json_filename_csharp_friendly]`. E.g.:
 ```csharp
 // For /mock_files/products.json
-using MyCompany.MyProject.Json.MockFiles.Products;
+using MyCompany.MyProject.Json.Products;
 ```
-Intellisense should help you out when adding a using statement for this. The complicated namespace is needed to ensure separation between different files.
+Intellisense should help you out when adding a using statement for this.
 
 # Example usage
 

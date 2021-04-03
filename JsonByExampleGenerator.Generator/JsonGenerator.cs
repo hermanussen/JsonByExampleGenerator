@@ -72,7 +72,32 @@ namespace JsonByExampleGenerator.Generator
                     SourceText.From(onlyOnceGeneratedCode, Encoding.UTF8));
 
                 // Resolve all json files that are added to the AdditionalFiles in the compilation
-                var allJsonFiles = context.AdditionalFiles.Where(f => f.Path.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase));
+                var allJsonFiles = context
+                    .AdditionalFiles
+                    .Where(f => f.Path.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase))
+                    .ToList();
+
+                // If there are multiple files with the same name, report an error
+                var duplicates = allJsonFiles
+                    .Select(f => Path.GetFileNameWithoutExtension(f.Path))
+                    .GroupBy(f => f)
+                    .Where(f => f.Count() > 1)
+                    .Select(f => f.Key);
+                if(duplicates.Any())
+                {
+                    string message = $"Multiple json files found with the same name; JsonByExampleGenerator cannot generate code for this, because it would cause errors. File names: {string.Join(", ", duplicates)}";
+                    context.ReportDiagnostic(Diagnostic.Create(
+                        new DiagnosticDescriptor(
+                            "SI0001",
+                            message,
+                            message,
+                            "JsonByExampleGenerator",
+                            DiagnosticSeverity.Error,
+                            isEnabledByDefault: true),
+                        Location.None));
+                    return;
+                }
+
                 foreach (var jsonFile in allJsonFiles)
                 {
                     var jsonFileText = jsonFile.GetText(context.CancellationToken);
@@ -83,8 +108,8 @@ namespace JsonByExampleGenerator.Generator
 
                     var json = JsonDocument.Parse(jsonFileText.ToString());
 
-                    // Determine the deeper namespace based on the path within the project and the file name
-                    string deeperNamespaceName = GetDeeperNamespaceName(namespaceName, jsonFile);
+                    // Determine the namespace based on the file name
+                    string jsonFileNameBasedNamespace = GetDeeperNamespaceName(namespaceName, jsonFile);
 
                     // Read the json and build a list of models that can be used to generate classes
                     var classModels = new List<ClassModel>();
@@ -130,14 +155,14 @@ namespace JsonByExampleGenerator.Generator
 
                     if (context.Compilation != null)
                     {
-                        FilterAndChangeBasedOnExistingCode(classModels, deeperNamespaceName, context.Compilation);
+                        FilterAndChangeBasedOnExistingCode(classModels, jsonFileNameBasedNamespace, context.Compilation);
                     }
 
                     // Use Scriban to render the code using the model that was built
                     string generatedCode = template.Render(new
                     {
                         OptionalDependencies = optionalDependencies,
-                        NamespaceName = deeperNamespaceName,
+                        NamespaceName = jsonFileNameBasedNamespace,
                         ConfigEnabled = configEnabled,
                         ClassModels = classModels,
                         RuntimeVersion = RuntimeVersion,
@@ -146,8 +171,8 @@ namespace JsonByExampleGenerator.Generator
                     }, member => member.Name);
 
                     // Add the generated code to the compilation
-                    context.AddSource(GetSourceFileName(jsonFile.Path),
-                        SourceText.From(generatedCode, Encoding.UTF8));
+                    var hintName = GetSourceFileName(jsonFile.Path);
+                    context.AddSource(hintName, SourceText.From(generatedCode, Encoding.UTF8));
                 }
             }
             catch (Exception ex)
@@ -174,23 +199,9 @@ namespace JsonByExampleGenerator.Generator
         /// <returns></returns>
         private static string GetDeeperNamespaceName(string namespaceName, AdditionalText jsonFile)
         {
-            string compilationPath = Path.GetFullPath(".");
-            string relativePath = Path.GetFullPath(jsonFile.Path);
-            if (relativePath.StartsWith(compilationPath))
-            {
-                relativePath = relativePath.Substring(compilationPath.Length);
-            }
+            string fileName = Path.GetFileNameWithoutExtension(jsonFile.Path);
 
-            if (relativePath.EndsWith(".json", StringComparison.InvariantCultureIgnoreCase))
-            {
-                relativePath = relativePath.Substring(0, relativePath.Length - 5);
-            }
-
-            var deeperNamespaceParts = relativePath
-                .Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(r => GetValidName(r));
-
-            return $"{namespaceName}.Json.{string.Join(".", deeperNamespaceParts)}";
+            return $"{namespaceName}.Json.{GetValidName(fileName)}";
         }
 
         /// <summary>
@@ -200,14 +211,13 @@ namespace JsonByExampleGenerator.Generator
         /// <returns></returns>
         private string GetSourceFileName(string path)
         {
-            var fullPath = Path.GetFullPath(path)
-                .Replace(Path.GetFullPath("."), string.Empty)
+            var fileName = Path.GetFileNameWithoutExtension(path)
                 .Replace("/", "_")
                 .Replace("\\", "_")
                 .Replace(".", "_")
                 .Replace(":", "_");
 
-            return $"{fullPath.Trim('_')}.gen.cs";
+            return $"{fileName.Trim('_')}.gen.cs";
         }
 
         /// <summary>

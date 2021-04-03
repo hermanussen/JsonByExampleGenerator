@@ -95,8 +95,8 @@ namespace Example
             streamWriter.Write(@""{jsonAsString.Replace("\"", "\"\"")}"");
             streamWriter.Flush();
             readStream.Position = 0;
-            var ser = new DataContractJsonSerializer(typeof(TestImplementation.Json.{prefixPath}{rootTypeName}.{rootTypeName}));
-            var rootType = (TestImplementation.Json.{prefixPath}{rootTypeName}.{rootTypeName}) ser.ReadObject(readStream);
+            var ser = new DataContractJsonSerializer(typeof(TestImplementation.Json.{rootTypeName}.{rootTypeName}));
+            var rootType = (TestImplementation.Json.{rootTypeName}.{rootTypeName}) ser.ReadObject(readStream);
             
             var writeStream = new MemoryStream();
             ser.WriteObject(writeStream, rootType);
