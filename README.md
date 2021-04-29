@@ -190,3 +190,12 @@ namespace MyNs.Json.Products
 ```
 
 The generator will respect the new name and change it in all generated code.
+
+## Manually change the namespace for generated code
+
+By default, the generator will generate all code under `[your_dll_name_without_extension].Json.[json_filename_csharp_friendly]`. But if you want, you can change this by providing an assembly level attribute. For example:
+```csharp
+using MyNs.Json;
+
+[assembly:JsonRenameNamespace("MyNs.Json.Something", "MyNs.Something.Else")]
+```

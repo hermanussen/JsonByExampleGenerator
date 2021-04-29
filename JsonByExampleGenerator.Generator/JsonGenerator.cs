@@ -25,6 +25,9 @@ namespace JsonByExampleGenerator.Generator
     [Generator]
     public class JsonGenerator : ISourceGenerator
     {
+        private static readonly string[] RenameAttributeNames = { "JsonRenamedFrom", "JsonRenamedFromAttribute" };
+        private static readonly string[] NamespaceRenameAttributeNames = { "JsonRenameNamespace", "JsonRenameNamespaceAttribute" };
+
         private static readonly string RuntimeVersion = Environment.Version.ToString();
         private static readonly string ToolName = typeof(JsonGenerator).Assembly.GetName().Name;
         private static readonly string ToolVersion = typeof(JsonGenerator).Assembly.GetName().Version.ToString();
@@ -109,7 +112,28 @@ namespace JsonByExampleGenerator.Generator
                     var json = JsonDocument.Parse(jsonFileText.ToString());
 
                     // Determine the namespace based on the file name
-                    string jsonFileNameBasedNamespace = GetDeeperNamespaceName(namespaceName, jsonFile);
+                    string jsonFileNameBasedNamespace;
+                    {
+                        string originalNamespace = GetDeeperNamespaceName(namespaceName, jsonFile);
+
+                        // Rename the namespace if needed
+                        string? renamedNamespace = context
+                            .Compilation
+                            ?.SyntaxTrees
+                            .SelectMany(s => s
+                                .GetRoot()
+                                .DescendantNodes()
+                                .Where(d => d.IsKind(SyntaxKind.Attribute))
+                                .OfType<AttributeSyntax>()
+                                .Where(d =>
+                                    NamespaceRenameAttributeNames.Any(r => r.Equals(d.Name.ToString()))
+                                    && originalNamespace.Equals(d?.ArgumentList?.Arguments.FirstOrDefault()
+                                        ?.ToString().Trim().Trim('\"')))
+                                .Select(d =>
+                                    d?.ArgumentList?.Arguments.Skip(1).FirstOrDefault()?.ToString().Trim().Trim('\"')))
+                            .FirstOrDefault();
+                        jsonFileNameBasedNamespace = renamedNamespace ?? originalNamespace;
+                    }
 
                     // Read the json and build a list of models that can be used to generate classes
                     var classModels = new List<ClassModel>();
@@ -267,7 +291,7 @@ namespace JsonByExampleGenerator.Generator
                     .DescendantNodes()
                     .Where(d => d.IsKind(SyntaxKind.Attribute))
                     .OfType<AttributeSyntax>()
-                    .Where(d => d.Name.ToString() == "JsonRenamedFrom")
+                    .Where(d => RenameAttributeNames.Any(x => x.Equals(d.Name.ToString())))
                     .Select(d => new
                         {
                             Renamed = (d?.Parent?.Parent as ClassDeclarationSyntax)?.Identifier.ToString().Trim(),
@@ -326,7 +350,7 @@ namespace JsonByExampleGenerator.Generator
                 }
             }
         }
-
+        
         /// <summary>
         /// Find out if Microsoft.Extensions.Configuration.Json is used.
         /// </summary>

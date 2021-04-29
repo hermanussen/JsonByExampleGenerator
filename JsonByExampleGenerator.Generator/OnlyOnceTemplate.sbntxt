@@ -11,6 +11,9 @@ using System;
 
 namespace {{ NamespaceName }}.Json
 {
+    /// <summary>
+    /// Mark a class with this attribute and provide it with the original class name to rename it.
+    /// </summary>
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("{{ ToolName }}", "{{ ToolVersion }}")]
     [AttributeUsage(AttributeTargets.Class)]
@@ -21,6 +24,24 @@ namespace {{ NamespaceName }}.Json
         internal JsonRenamedFromAttribute(string sourceName)
         {
             SourceName = sourceName;
+        }
+    }
+    
+    /// <summary>
+    /// Mark an assembly with this attribute and pass the namespace name you would like to be used for the generated code.
+    /// </summary>
+    [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("{{ ToolName }}", "{{ ToolVersion }}")]
+    [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
+    internal sealed class JsonRenameNamespaceAttribute : Attribute
+    {
+        internal string SourceName { get; private set; }
+        internal string TargetName { get; private set; }
+
+        internal JsonRenameNamespaceAttribute(string sourceNamespaceName, string targetNamespaceName)
+        {
+            SourceName = sourceNamespaceName;
+            TargetName = targetNamespaceName;
         }
     }
 }

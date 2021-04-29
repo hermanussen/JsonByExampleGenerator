@@ -60,33 +60,37 @@ namespace Example
             Assert.Equal("111 33", RunTest(compilation));
         }
 
-        [Fact]
-        public void ShouldGenerateWithChangedClassName()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ShouldGenerateWithChangedClassName(bool useAttributePostfix)
         {
-            string source = @"using System;
+            string postfix = (useAttributePostfix ? "Attribute" : string.Empty);
+
+            string source = @$"using System;
 
 namespace TestImplementation.Json.Example
-{
-    [JsonRenamedFrom(""Example"")]
+{{
+    [JsonRenamedFrom{postfix}(""Example"")]
     public partial class DifferentName
-    {
-    }
-}
+    {{
+    }}
+}}
 
 namespace Example
-{
+{{
     class Test
-    {
+    {{
         public static string RunTest()
-        {
+        {{
             var json = new TestImplementation.Json.Example.DifferentName()
-                {
+                {{
                     Prop = ""testval""
-                };
-            return $""{json.Prop}"";
-        }
-    }
-}";
+                }};
+            return $""{{json.Prop}}"";
+        }}
+    }}
+}}";
             var compilation = GetGeneratedOutput(source, new Dictionary<string, string>()
                 {
                     { "example.json", "{ \"prop\" : \"val\" }" }
@@ -148,6 +152,46 @@ namespace Example
                 });
 
             Assert.Equal("testval 2 Octopus", RunTest(compilation));
+        }
+        
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void ShouldGenerateWithChangedNamespace(bool useAttributePostfix)
+        {
+            string postfix = (useAttributePostfix ? "Attribute" : string.Empty);
+
+            string source = @$"using System;
+using TestImplementation.Json;
+
+[assembly:JsonRenameNamespace{postfix}(""TestImplementation.Json.Example"", ""Renamed"")]
+[assembly:JsonRenameNamespace{postfix}(""TestImplementation.Json.Peace"", ""PeaceRenamed"")]
+
+namespace Example
+{{
+    class Test
+    {{
+        public static string RunTest()
+        {{
+            var json = new Renamed.Example()
+                {{
+                    Prop = ""testval""
+                }};
+            var json2 = new PeaceRenamed.Peace()
+                {{
+                    Prop = ""peace""
+                }};
+            return $""{{json.Prop}} {{json2.Prop}}"";
+        }}
+    }}
+}}";
+            var compilation = GetGeneratedOutput(source, new Dictionary<string, string>()
+            {
+                { "example.json", "{ \"prop\" : \"val\" }" },
+                { "peace.json", "{ \"prop\" : \"val\" }" }
+            });
+
+            Assert.Equal("testval peace", RunTest(compilation));
         }
     }
 }
