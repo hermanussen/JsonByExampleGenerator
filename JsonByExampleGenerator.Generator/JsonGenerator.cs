@@ -288,12 +288,6 @@ namespace JsonByExampleGenerator.Generator
                     // Find all properties and update the type and init
                     foreach(var property in classModels.SelectMany(p => p.Properties).ToList())
                     {
-                        // Update init statement, if applicable
-                        if(property.Init == $"new List<{match.From}>()")
-                        {
-                            property.Init = $"new List<{classModel.ClassName}>()";
-                        }
-
                         // Rename property type, if applicable
                         if(property.PropertyType == match.From)
                         {
@@ -413,17 +407,11 @@ namespace JsonByExampleGenerator.Generator
                                             ResolveTypeRecursive(context, classModels, prop.Value, arrPropName);
                                         }
 
-                                        propertyModel = new PropertyModel(prop.Name, $"IList<{arrPropName}>", propName, orderCounter++)
-                                        {
-                                            Init = $"new List<{arrPropName}>()"
-                                        };
+                                        propertyModel = new PropertyModel(prop.Name, $"IList<{arrPropName}>", propName, orderCounter++);
                                     }
                                     else
                                     {
-                                        propertyModel = new PropertyModel(prop.Name, $"IList<object>", propName, orderCounter++)
-                                        {
-                                            Init = $"new List<object>()"
-                                        };
+                                        propertyModel = new PropertyModel(prop.Name, $"IList<object>", propName, orderCounter++);
                                     }
 
                                     break;

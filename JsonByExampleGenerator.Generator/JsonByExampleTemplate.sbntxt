@@ -22,7 +22,7 @@ namespace {{ NamespaceName }}
     public partial class {{ ClassModel.ClassName }}
     {
         {{ for Property in ClassModel.Properties }}[DataMember(Name = "{{ Property.PropertyNameOriginal }}", EmitDefaultValue = false, Order = {{ Property.Order }})]
-        public {{ Property.PropertyType }} {{ Property.PropertyName }} { get; set; }{{ if Property.Init }} = {{ Property.Init }};{{ end }}
+        public {{ Property.PropertyType }} {{ Property.PropertyName }} { get; set; }
         {{ end }}{{ if ConfigEnabled }}
         public static {{ ClassModel.ClassName }} FromConfig([System.Diagnostics.CodeAnalysis.NotNull] IConfiguration config)
         {

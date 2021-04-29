@@ -22,11 +22,6 @@
         public string PropertyNameOriginal { get; private set; }
 
         /// <summary>
-        /// If the property needs to have a default value, it can be specified here.
-        /// </summary>
-        public string? Init { get; internal set; }
-
-        /// <summary>
         /// The order for output in json.
         /// </summary>
         public int Order { get; private set; }

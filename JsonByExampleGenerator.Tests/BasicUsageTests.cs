@@ -157,6 +157,7 @@ namespace Example
         {
             string source = @"using System;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace Example
 {
@@ -165,6 +166,7 @@ namespace Example
         public static string RunTest()
         {
             var json = new TestImplementation.Json.Example.Example();
+            json.Violins ??= new List<TestImplementation.Json.Example.Violin>();
             json.Violins.Add(new TestImplementation.Json.Example.Violin()
                                 {
                                     Name = ""My violin""
@@ -186,6 +188,7 @@ namespace Example
         {
             string source = @"using System;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace Example
 {
@@ -194,8 +197,11 @@ namespace Example
         public static string RunTest()
         {
             var json = new TestImplementation.Json.Example.Example();
+            json.Violins ??= new List<string>();
             json.Violins.Add(""My violin"");
+            json.NumberSequence = new List<int>();
             json.NumberSequence.Add(33);
+            json.BoolSequence = new List<bool>();
             json.BoolSequence.Add(true);
             return $""{json.Violins.First()} {json.NumberSequence.First()} {json.BoolSequence.First()}"";
         }
@@ -214,6 +220,7 @@ namespace Example
         {
             string source = @"using System;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace Example
 {
@@ -222,6 +229,7 @@ namespace Example
         public static string RunTest()
         {
             var json = new TestImplementation.Json.Example.Example();
+            json.Violins ??= new List<TestImplementation.Json.Example.Violin>();
             json.Violins.Add(new TestImplementation.Json.Example.Violin()
                                 {
                                     Name = ""My violin"",
