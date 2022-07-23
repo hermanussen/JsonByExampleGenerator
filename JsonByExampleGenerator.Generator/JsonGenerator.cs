@@ -74,6 +74,9 @@ namespace JsonByExampleGenerator.Generator
                 context.AddSource($"{namespaceName}_onlyonce.gen.cs",
                     SourceText.From(onlyOnceGeneratedCode, Encoding.UTF8));
 
+                // Get json that is specified directly in code
+                (context.SyntaxReceiver as InCodeSyntaxReceiver)?.InCodeJsons;
+
                 // Resolve all json files that are added to the AdditionalFiles in the compilation
                 var allJsonFiles = context
                     .AdditionalFiles
@@ -607,7 +610,8 @@ namespace JsonByExampleGenerator.Generator
         /// <param name="context">Code generator context</param>
         public void Initialize(GeneratorInitializationContext context)
         {
-            // No implementation needed here; the generator is entirely driven by use of AdditionalFiles
+            // Only the use of json in const strings is a target for visiting
+            context.RegisterForSyntaxNotifications(() => new InCodeSyntaxReceiver());
         }
     }
 }
