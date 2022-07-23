@@ -74,9 +74,6 @@ namespace JsonByExampleGenerator.Generator
                 context.AddSource($"{namespaceName}_onlyonce.gen.cs",
                     SourceText.From(onlyOnceGeneratedCode, Encoding.UTF8));
 
-                // Get json that is specified directly in code
-                (context.SyntaxReceiver as InCodeSyntaxReceiver)?.InCodeJsons;
-
                 // Resolve all json files that are added to the AdditionalFiles in the compilation
                 var allJsonFiles = context
                     .AdditionalFiles
@@ -104,6 +101,7 @@ namespace JsonByExampleGenerator.Generator
                     return;
                 }
 
+                // Process json from additional files
                 foreach (var jsonFile in allJsonFiles)
                 {
                     var jsonFileText = jsonFile.GetText(context.CancellationToken);
@@ -112,94 +110,21 @@ namespace JsonByExampleGenerator.Generator
                         continue;
                     }
 
-                    var json = JsonDocument.Parse(jsonFileText.ToString());
+                    var jsonDocument = JsonDocument.Parse(jsonFileText.ToString());
 
-                    // Determine the namespace based on the file name
-                    string jsonFileNameBasedNamespace;
-                    {
-                        string originalNamespace = GetDeeperNamespaceName(namespaceName, jsonFile);
+                    HandleJson(context, namespaceName, configEnabled, optionalDependencies, jsonDocument, jsonFile.Path);
+                }
 
-                        // Rename the namespace if needed
-                        string? renamedNamespace = context
-                            .Compilation
-                            ?.SyntaxTrees
-                            .SelectMany(s => s
-                                .GetRoot()
-                                .DescendantNodes()
-                                .Where(d => d.IsKind(SyntaxKind.Attribute))
-                                .OfType<AttributeSyntax>()
-                                .Where(d =>
-                                    NamespaceRenameAttributeNames.Any(r => r.Equals(d.Name.ToString()))
-                                    && originalNamespace.Equals(d?.ArgumentList?.Arguments.FirstOrDefault()
-                                        ?.ToString().Trim().Trim('\"')))
-                                .Select(d =>
-                                    d?.ArgumentList?.Arguments.Skip(1).FirstOrDefault()?.ToString().Trim().Trim('\"')))
-                            .FirstOrDefault();
-                        jsonFileNameBasedNamespace = renamedNamespace ?? originalNamespace;
-                    }
+                // Get json that is specified directly in code
+                var inCodeJsons = (context.SyntaxReceiver as InCodeSyntaxReceiver)?.InCodeJsons
+                    ?? new List<KeyValuePair<string, string>>();
 
-                    // Read the json and build a list of models that can be used to generate classes
-                    var classModels = new List<ClassModel>();
-                    var jsonElement = json.RootElement;
-                    string rootTypeName = GetValidName(Path.GetFileNameWithoutExtension(jsonFile.Path).Replace(" ", string.Empty), true);
-                    ResolveTypeRecursive(context, classModels, jsonElement, rootTypeName);
+                // Process json from code
+                foreach (var inCodeJson in inCodeJsons)
+                {
+                    var jsonDocument = JsonDocument.Parse(inCodeJson.Value);
 
-                    // Attempt to find a Scriban template in the AdditionalFiles that has the same name as the json
-                    string templateFileName = $"{Path.Combine(Path.GetDirectoryName(jsonFile.Path), Path.GetFileNameWithoutExtension(jsonFile.Path))}.sbntxt";
-                    string? templateContent = GetTemplateContent(context, templateFileName);
-                    if (string.IsNullOrWhiteSpace(templateContent))
-                    {
-                        var pathRoot = Path.GetPathRoot(jsonFile.Path);
-                        var pathParts = Path.GetDirectoryName(jsonFile.Path).Split(new[] { Path.DirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
-                        const string directorySbnFileName = "JsonByExampleTemplate.sbntxt";
-                        do
-                        {
-                            var filePath = string.IsNullOrWhiteSpace(pathRoot)
-                                ? Path.Combine(Path.Combine(pathParts), directorySbnFileName)
-                                : Path.Combine(pathRoot, Path.Combine(pathParts.Skip(1).ToArray()), directorySbnFileName);
-                            templateContent = GetTemplateContent(context, filePath);
-
-                            if (!pathParts.Any())
-                            {
-                                break;
-                            }
-                            Array.Resize(ref pathParts, pathParts.Length - 1);
-                        } while (string.IsNullOrWhiteSpace(templateContent));
-                    }
-
-                    Template template;
-                    if (templateContent != null)
-                    {
-                        // Parse the template that is in the compilation
-                        template = Template.Parse(templateContent, templateFileName);
-                    }
-                    else
-                    {
-                        // Fallback to the default template
-                        const string defaultTemplatePath = "JsonByExampleTemplate.sbntxt";
-                        template = Template.Parse(EmbeddedResource.GetContent(defaultTemplatePath), defaultTemplatePath);
-                    }
-
-                    if (context.Compilation != null)
-                    {
-                        FilterAndChangeBasedOnExistingCode(classModels, jsonFileNameBasedNamespace, context.Compilation);
-                    }
-
-                    // Use Scriban to render the code using the model that was built
-                    string generatedCode = template.Render(new
-                    {
-                        OptionalDependencies = optionalDependencies,
-                        NamespaceName = jsonFileNameBasedNamespace,
-                        ConfigEnabled = configEnabled,
-                        ClassModels = classModels,
-                        RuntimeVersion = RuntimeVersion,
-                        ToolName = ToolName,
-                        ToolVersion = ToolVersion
-                    }, member => member.Name);
-
-                    // Add the generated code to the compilation
-                    var hintName = GetSourceFileName(jsonFile.Path);
-                    context.AddSource(hintName, SourceText.From(generatedCode, Encoding.UTF8));
+                    HandleJson(context, namespaceName, configEnabled, optionalDependencies, jsonDocument, inCodeJson.Key);
                 }
             }
             catch (Exception ex)
@@ -219,14 +144,113 @@ namespace JsonByExampleGenerator.Generator
         }
 
         /// <summary>
-        /// Based on a namespace and a file, determine a proper namespace to generate classes in.
+        /// Helper method for executing the code generation step for an individual json.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="namespaceName"></param>
+        /// <param name="configEnabled"></param>
+        /// <param name="optionalDependencies"></param>
+        /// <param name="json"></param>
+        /// <param name="jsonFilePath"></param>
+        private void HandleJson(GeneratorExecutionContext context, string namespaceName, bool configEnabled, List<string> optionalDependencies, JsonDocument json, string jsonFilePath)
+        {
+            // Determine the namespace based on the file name
+            string jsonFileNameBasedNamespace;
+            {
+                string originalNamespace = GetDeeperNamespaceName(namespaceName, jsonFilePath);
+
+                // Rename the namespace if needed
+                string? renamedNamespace = context
+                    .Compilation
+                    ?.SyntaxTrees
+                    .SelectMany(s => s
+                        .GetRoot()
+                        .DescendantNodes()
+                        .Where(d => d.IsKind(SyntaxKind.Attribute))
+                        .OfType<AttributeSyntax>()
+                        .Where(d =>
+                            NamespaceRenameAttributeNames.Any(r => r.Equals(d.Name.ToString()))
+                            && originalNamespace.Equals(d?.ArgumentList?.Arguments.FirstOrDefault()
+                                ?.ToString().Trim().Trim('\"')))
+                        .Select(d =>
+                            d?.ArgumentList?.Arguments.Skip(1).FirstOrDefault()?.ToString().Trim().Trim('\"')))
+                    .FirstOrDefault();
+                jsonFileNameBasedNamespace = renamedNamespace ?? originalNamespace;
+            }
+
+            // Read the json and build a list of models that can be used to generate classes
+            var classModels = new List<ClassModel>();
+            var jsonElement = json.RootElement;
+            string rootTypeName = GetValidName(Path.GetFileNameWithoutExtension(jsonFilePath).Replace(" ", string.Empty), true);
+            ResolveTypeRecursive(context, classModels, jsonElement, rootTypeName);
+
+            // Attempt to find a Scriban template in the AdditionalFiles that has the same name as the json
+            string templateFileName = $"{Path.Combine(Path.GetDirectoryName(jsonFilePath), Path.GetFileNameWithoutExtension(jsonFilePath))}.sbntxt";
+            string? templateContent = GetTemplateContent(context, templateFileName);
+            if (string.IsNullOrWhiteSpace(templateContent))
+            {
+                var pathRoot = Path.GetPathRoot(jsonFilePath);
+                var pathParts = Path.GetDirectoryName(jsonFilePath).Split(new[] { Path.DirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+                const string directorySbnFileName = "JsonByExampleTemplate.sbntxt";
+                do
+                {
+                    var filePath = string.IsNullOrWhiteSpace(pathRoot)
+                        ? Path.Combine(Path.Combine(pathParts), directorySbnFileName)
+                        : Path.Combine(pathRoot, Path.Combine(pathParts.Skip(1).ToArray()), directorySbnFileName);
+                    templateContent = GetTemplateContent(context, filePath);
+
+                    if (!pathParts.Any())
+                    {
+                        break;
+                    }
+                    Array.Resize(ref pathParts, pathParts.Length - 1);
+                } while (string.IsNullOrWhiteSpace(templateContent));
+            }
+
+            Template template;
+            if (templateContent != null)
+            {
+                // Parse the template that is in the compilation
+                template = Template.Parse(templateContent, templateFileName);
+            }
+            else
+            {
+                // Fallback to the default template
+                const string defaultTemplatePath = "JsonByExampleTemplate.sbntxt";
+                template = Template.Parse(EmbeddedResource.GetContent(defaultTemplatePath), defaultTemplatePath);
+            }
+
+            if (context.Compilation != null)
+            {
+                FilterAndChangeBasedOnExistingCode(classModels, jsonFileNameBasedNamespace, context.Compilation);
+            }
+
+            // Use Scriban to render the code using the model that was built
+            string generatedCode = template.Render(new
+            {
+                OptionalDependencies = optionalDependencies,
+                NamespaceName = jsonFileNameBasedNamespace,
+                ConfigEnabled = configEnabled,
+                ClassModels = classModels,
+                RuntimeVersion = RuntimeVersion,
+                ToolName = ToolName,
+                ToolVersion = ToolVersion
+            }, member => member.Name);
+
+            // Add the generated code to the compilation
+            var hintName = GetSourceFileName(jsonFilePath);
+            context.AddSource(hintName, SourceText.From(generatedCode, Encoding.UTF8));
+        }
+
+        /// <summary>
+        /// Based on a namespace and a file path, determine a proper namespace to generate classes in.
         /// </summary>
         /// <param name="namespaceName">Root namespace name</param>
-        /// <param name="jsonFile">File to get namespace for</param>
+        /// <param name="filePath">File path to get namespace for</param>
         /// <returns></returns>
-        private static string GetDeeperNamespaceName(string namespaceName, AdditionalText jsonFile)
+        private static string GetDeeperNamespaceName(string namespaceName, string filePath)
         {
-            string fileName = Path.GetFileNameWithoutExtension(jsonFile.Path);
+            string fileName = Path.GetFileNameWithoutExtension(filePath);
 
             return $"{namespaceName}.Json.{GetValidName(fileName)}";
         }
