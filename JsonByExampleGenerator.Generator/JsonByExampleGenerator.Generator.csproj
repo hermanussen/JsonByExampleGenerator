@@ -26,14 +26,14 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.8.0" />
-    <PackageReference Include="NuGetizer" Version="0.6.0">
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.2.0" />
+    <PackageReference Include="NuGetizer" Version="0.8.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Pluralize.NET" Version="1.0.2" GeneratePathProperty="true" PrivateAssets="all" />
-    <PackageReference Include="Scriban" Version="3.4.1" GeneratePathProperty="true" IncludeAssets="build" PrivateAssets="all" />
-    <PackageReference Include="System.Text.Json" Version="5.0.1" GeneratePathProperty="true" PrivateAssets="all" />
+    <PackageReference Include="Scriban" Version="5.5.0" GeneratePathProperty="true" IncludeAssets="build" PrivateAssets="all" />
+    <PackageReference Include="System.Text.Json" Version="6.0.5" GeneratePathProperty="true" PrivateAssets="all" />
   </ItemGroup>
 
   <PropertyGroup>
