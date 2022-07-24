@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using JsonByExampleGenerator.Example.Json;
 using JsonByExampleGenerator.Example.Json.Products;
+using JsonByExampleGenerator.Example.Json.Animal;
 using JsonByExampleGenerator.Example.Json.Appsettings;
 using Microsoft.Extensions.Configuration;
+using System.Runtime.Serialization;
 
 namespace JsonByExampleGenerator.Example
 {
@@ -12,6 +15,14 @@ namespace JsonByExampleGenerator.Example
     /// </summary>
     class Program
     {
+        // Example based on json that is defined in the code itself
+        [JsonExample("Animal")]
+        private const string AnimalJsonInCode = @"
+{
+  ""name"" : ""Spider"",
+  ""legs"" : 8
+}";
+
         static void Main()
         {
             // Example based on products.json
@@ -36,6 +47,16 @@ namespace JsonByExampleGenerator.Example
 
             Console.WriteLine($"id={product.Id}");
             Console.WriteLine($"name={product.Name}");
+
+            // Example based on const string
+            var spider = new Animal()
+                {
+                    Name = "Spider",
+                    Legs = 8
+                };
+
+            Console.WriteLine($"name={spider.Name}");
+            Console.WriteLine($"legs={spider.Legs}");
 
             // Example of configuration
             IConfiguration config = new ConfigurationBuilder()

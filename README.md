@@ -72,6 +72,28 @@ var product = new Product()
     };
 ```
 
+## Use a constant string with json data in code to generate classes
+
+Given the following string constant in your code:
+```csharp
+[JsonExample("Animal")]
+private const string AnimalJsonInCode = @"
+{
+    ""name"" : ""Spider"",
+    ""legs"" : 8
+}";
+```
+
+You can then use the generated code as follows:
+
+```csharp
+var spider = new Animal()
+    {
+        Name = "Spider",
+        Legs = 8
+    };
+```
+
 ## Get json configuration without the need for magic strings
 
 [![Json configuration feature example](Media/jsonbyexample_config.gif)]
