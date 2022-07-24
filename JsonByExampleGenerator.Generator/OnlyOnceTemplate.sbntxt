@@ -44,4 +44,20 @@ namespace {{ NamespaceName }}.Json
             TargetName = targetNamespaceName;
         }
     }
+    
+    /// <summary>
+    /// Mark a string constant with this attribute to be able to use it as an example of your json structure in code.
+    /// </summary>
+    [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("{{ ToolName }}", "{{ ToolVersion }}")]
+    [AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
+    internal sealed class JsonExampleAttribute : Attribute
+    {
+        internal string Name { get; private set; }
+
+        internal JsonExampleAttribute(string name)
+        {
+            Name = name;
+        }
+    }
 }

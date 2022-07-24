@@ -18,13 +18,13 @@ namespace JsonByExampleGenerator.Tests
         public void ShouldGenerate()
         {
             string source = @"using System;
-using System.Runtime.Serialization;
+using TestImplementation.Json;
 
 namespace Example
 {
     class Test
     {
-        [DataMember(Name = ""Example"")]
+        [JsonExample(""Example"")]
         private const string Json = ""{ \""prop\"" : \""val\"" }"";
 
         public static string RunTest()

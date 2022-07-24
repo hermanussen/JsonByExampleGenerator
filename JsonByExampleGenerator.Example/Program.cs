@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using JsonByExampleGenerator.Example.Json;
 using JsonByExampleGenerator.Example.Json.Products;
 using JsonByExampleGenerator.Example.Json.Animal;
 using JsonByExampleGenerator.Example.Json.Appsettings;
@@ -14,10 +15,11 @@ namespace JsonByExampleGenerator.Example
     /// </summary>
     class Program
     {
-        [DataMember(Name = "Animal")]
+        // Example based on json that is defined in the code itself
+        [JsonExample("Animal")]
         private const string AnimalJsonInCode = @"
 {
-  ""name"" : ""Spider""
+  ""name"" : ""Spider"",
   ""legs"" : 8
 }";
 

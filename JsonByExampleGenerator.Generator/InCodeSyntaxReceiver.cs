@@ -10,6 +10,8 @@ namespace JsonByExampleGenerator.Generator
     /// </summary>
     public class InCodeSyntaxReceiver : ISyntaxReceiver
     {
+        private static readonly string[] JsonExampleAttributeNames = { "JsonExample", "JsonExampleAttribute" };
+
         public List<KeyValuePair<string, string>> InCodeJsons { get; } = new();
 
         public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
@@ -20,7 +22,7 @@ namespace JsonByExampleGenerator.Generator
                 var attribute = fieldDeclarationSyntax
                     .AttributeLists
                     .SelectMany(a => a.Attributes)
-                    .Where(a => a.Name.ToFullString() == "DataMember")
+                    .Where(a => JsonExampleAttributeNames.Contains(a.Name.ToFullString()))
                     .FirstOrDefault();
                 if(attribute == null)
                 {
